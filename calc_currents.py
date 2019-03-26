@@ -83,7 +83,6 @@ basis_full = {'H': 'sz',
 
 #grid_size is the divider for h
 grid_size=3
-#######
 
 
 """
@@ -183,7 +182,7 @@ eV2au = 1/27.211
 
 fname = "basis_{0}__xc_{1}__h_{2}__fdwithd_{3}__kpts_{4}__mode_{5}__vacuum_{6}__".format(basis,xc,h,FDwidth,kpts,mode,vacuum)
 
-basename = "__basis_{0}__h_{1}__cutoff_{2}__xc_{3}__gridsize_{4:.2f}__bias_{5}__ef_{6}__gamma_{7}__e_grid_{8}_{9}_{10}__muliti_grid__type__".format(basis, h, co, xc, grid_size, bias, ef, gamma, estart, eend, es)
+basename = "__basis_{0}__h_{1}__cutoff_{2}__xc_{3}__gridsize_{4:.2f}__bias_{5}__ef_{6}__gamma_{7}__energy_grid_{8}_{9}_{10}__muliti_grid__type__".format(basis, h, co, xc, grid_size, bias, ef, gamma, estart, eend, es)
 plot_basename = "plots/" + basename
 data_basename = "data/" + basename
 
@@ -195,15 +194,15 @@ es *= eV2au
 gamma *= eV2au
 
 H_ao, S_ao = pickle.load(open(path + 'scat_' + fname + '0.pckl', 'rb'))
-H_ao = H_ao[0, 0]
+H_ao = H_ao[0, 0] * eV2au
 S_ao = S_ao[0]
 n = len(H_ao)
 
-H_cen = H_ao *eV2au
 GamL = np.zeros([n,n])
 GamR = np.zeros([n,n])
+
 GamL[0,0] = gamma
-GamR[n-1,n-1] = gamma
+GamR[n - 1, n - 1] = gamma
 
 print("Calculating transmission")
 energy_grid = np.arange(estart, eend, es)
@@ -214,30 +213,20 @@ Gamma_R = [GamR for en in range(len(energy_grid))]
 Gamma_L = np.swapaxes(Gamma_L, 0, 2)
 Gamma_R = np.swapaxes(Gamma_R, 0, 2)
 
-#put the retarded GF on energy grid
-#Gr = ret_gf_ongrid(energy_grid, H_cen, S_ao, Gamma_L, Gamma_R)
-#######
-h_ao = H_cen
+Gr = ret_gf_ongrid(energy_grid, H_ao, S_ao, Gamma_L, Gamma_R)
 
-retarded_gf = []
-#Make retarded gf array
-for en in range(len(energy_grid)):
-	print('calculating retarded-GF, step', en)
-	retarded_gf.append(np.linalg.inv(energy_grid[en]*S_ao-h_ao+(1j/2.)*(Gamma_L[:, :, en] + Gamma_R[:, :, en])))
-
-ret_gf = np.array(retarded_gf)
-
-Gr = np.swapaxes(ret_gf, 0, 2)
 trans = calc_trans(energy_grid, Gr, Gamma_L, Gamma_R)
-plot_transmission(energy_grid*27.211399, trans, path+inv+plot_basename+"trans.png")
-np.save(path+inv+data_basename+'trans_full.npy',[energy_grid*27.211399,trans])
+
+plot_transmission(energy_grid*27.211399, trans, path + inv + plot_basename + "trans.png")
+np.save(path+inv+data_basename+'trans_full.npy',[energy_grid*27.211399, trans])
+
 print("transmission done")
 
 #current parametre, dobbeltcheck hvori ef indgaar for og efter den redefineres
-bias=1e-3
-ef=0
+bias = 1e-3
+ef = 0
 #De genomregnes fra eV til au laengere nede
-correction=False
+correction = False
 """
 Calculate the current
 """
@@ -246,52 +235,27 @@ fname = "basis_{0}__xc_{1}__h_{2}__fdwithd_{3}__kpts_{4}__mode_{5}__vacuum_{6}__
 
 basename = "__basis_{0}__h_{1}__cutoff_{2}__xc_{3}__gridsize_{4:.2f}__bias_{5}__ef_{6}__gamma_{7}__energy_grid_{8}_{9}_{10}__muliti_grid__type__"\
                 .format(basis, h, co, xc, grid_size, bias, ef, gamma, estart, eend, es)
-plot_basename = "plots/"+basename
-data_basename = "data/"+basename
+plot_basename = "plots/" + basename
+data_basename = "data/" + basename
 
 bias *= eV2au
 ef *= eV2au
 
-H_ao, S_ao = pickle.load(open(path+'scat_'+fname+'0.pckl', 'rb'))
-H_ao = H_ao[0, 0]
-S_ao = S_ao[0]
-n = len(H_ao)
-
-H_cen = H_ao *eV2au
-S_cen = S_ao
-GamL = np.zeros([n,n])
-GamR = np.zeros([n,n])
-GamL[0,0] = gamma
-GamR[n-1,n-1] = gamma
-
-
-
-
-print("Calculating transmission")
-"""transmission"""
-e_grid = np.arange(estart, eend, es)
-Gamma_L = [GamL for en in range(len(e_grid))]
-Gamma_R = [GamR for en in range(len(e_grid))]
-Gamma_L = np.swapaxes(Gamma_L, 0, 2)
-Gamma_R = np.swapaxes(Gamma_R, 0, 2)
-Gr = ret_gf_ongrid(e_grid, H_cen, S_cen, Gamma_L, Gamma_R)
-trans = calc_trans(e_grid, Gr, Gamma_L, Gamma_R)
-plot_transmission(e_grid*27.211399, trans, path+inv+plot_basename+"trans.png")
-np.save(path+inv+data_basename+'trans_full.npy',[e_grid*27.211399,trans])
-
-# MO - basis
-eig, vec = np.linalg.eig(np.dot(np.linalg.inv(S_cen),H_cen))
+eig, vec = np.linalg.eig(np.dot(np.linalg.inv(S_ao), H_ao))
 order = np.argsort(eig)
 eig = eig.take(order)
 vec = vec.take(order, axis=1)
-S_mo = np.dot(np.dot(vec.T.conj(), S_cen),vec)
+S_mo = np.dot(np.dot(vec.T.conj(), S_ao), vec)
 vec = vec/np.sqrt(np.diag(S_mo))
-S_mo = np.dot(np.dot(vec.T.conj(), S_cen), vec)
-H_mo = np.dot(np.dot(vec.T, H_cen), vec)
+S_mo = np.dot(np.dot(vec.T.conj(), S_ao), vec)
+H_mo = np.dot(np.dot(vec.T, H_ao), vec)
+
 GamL_mo = np.dot(np.dot(vec.T, GamL), vec)
 GamR_mo = np.dot(np.dot(vec.T, GamR), vec)
-Gamma_L_mo = [GamL_mo for en in range(len(e_grid))]
-Gamma_R_mo = [GamR_mo for en in range(len(e_grid))]
+
+Gamma_L_mo = [GamL_mo for en in range(len(energy_grid))]
+Gamma_R_mo = [GamR_mo for en in range(len(energy_grid))]
+
 Gamma_L_mo = np.swapaxes(Gamma_L_mo, 0, 2)
 Gamma_R_mo = np.swapaxes(Gamma_R_mo, 0, 2)
 
@@ -309,33 +273,33 @@ for n in range(len(eig)):
 hl_gap = ['HOMO er ', HOMO*27.211399, 'LUMO er ', LUMO*27.211399, 'mid-gap er ', midgap*27.211399]
 np.savetxt(path+'HOMO_LUMO.txt',X=hl_gap, fmt='%.10s',newline='\n')
 
-Gr_mo = ret_gf_ongrid(e_grid, H_mo, S_mo, Gamma_L_mo, Gamma_R_mo)
-trans_mo = calc_trans(e_grid, Gr_mo, Gamma_L_mo, Gamma_R_mo)
-plot_transmission(e_grid, trans_mo, path+inv+plot_basename+"trans_mo.png")
-np.save(path+inv+data_basename+'trans_full_mo.npy',[e_grid,trans_mo])
+Gr_mo = ret_gf_ongrid(energy_grid, H_mo, S_mo, Gamma_L_mo, Gamma_R_mo)
+trans_mo = calc_trans(energy_grid, Gr_mo, Gamma_L_mo, Gamma_R_mo)
+plot_transmission(energy_grid, trans_mo, path+inv+plot_basename+"trans_mo.png")
+np.save(path+inv+data_basename+'trans_full_mo.npy',[energy_grid, trans_mo])
 
 """Current with fermi functions"""
-fR, fL = fermi_ongrid(e_grid, ef, bias)
-dE = e_grid[1]-e_grid[0]
-current_trans = (1/(2*np.pi))*np.array([trans[en].real*(fL[en]-fR[en])*dE for en in range(len(e_grid))]).sum()
+fR, fL = fermi_ongrid(energy_grid, ef, bias)
+dE = energy_grid[1] - energy_grid[0]
+current_trans = (1/(2*np.pi))*np.array([trans[en].real*(fL[en]-fR[en])*dE for en in range(len(energy_grid))]).sum()
 
 np.save(path+inv+data_basename+"current_trans.npy", current_trans)
 
-Sigma_lesser = lesser_se_ongrid(e_grid, Gamma_L, Gamma_R, fL, fR)
-G_lesser = lesser_gf_ongrid(e_grid, Gr, Sigma_lesser)
-G_lesser2 = lesser_gf_ongrid2(e_grid, Gr, Gamma_L)
+Sigma_lesser = lesser_se_ongrid(energy_grid, Gamma_L, Gamma_R, fL, fR)
+G_lesser = lesser_gf_ongrid(energy_grid, Gr, Sigma_lesser)
+G_lesser2 = lesser_gf_ongrid2(energy_grid, Gr, Gamma_L)
 
-#    np.save(path+inv+data_basename+"matrices.npy",[H_cen,S_cen,Gr,G_lesser,e_grid])
+#    np.save(path+inv+data_basename+"matrices.npy",[H_ao,S_ao,Gr,G_lesser,energy_grid])
 
 """Current approx at low temp"""
 Sigma_r = -1j/2. *(GamL + GamR) #+ V_pot
 
 plot_complex_matrix(Sigma_r, path+inv+"Sigma_r")
 
-Gr_approx = retarded_gf2(H_cen, S_cen, ef, Sigma_r)
+Gr_approx = retarded_gf2(H_ao, S_ao, ef, Sigma_r)
 
 Sigma_r = 1j*np.zeros(Gamma_L.shape)
-for i in range(len(e_grid)):
+for i in range(len(energy_grid)):
     Sigma_r[:,:,i] = -1j/2. * (Gamma_L[:,:,i] + Gamma_R[:,:,i]) #+ V_pot
 
 basis = np.load(path+fname+"ao_basis_grid.npy")
