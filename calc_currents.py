@@ -12,6 +12,8 @@
 
 import matplotlib
 matplotlib.use('agg')
+#this is just to check github
+print('hey')
 
 import pickle as pickle
 from gpaw import setup_paths
