@@ -68,7 +68,18 @@ kpts = (1, 1, 1)
 mode = 'lcao'
 h = 0.20
 vacuum = 4
-basis_full = {'H': 'sz', 'C': basis, 'S': basis, 'N': basis, 'Si': basis,'Ge': basis, 'B': basis, 'O': basis, 'F': basis, 'Cl': basis, 'P': basis, 'Ru': basis}
+basis_full = {'H': 'sz',
+			  'C': basis,
+			  'S': basis,
+			  'N': basis,
+			  'Si': basis,
+			  'Ge': basis,
+			  'B': basis,
+			  'O': basis,
+			  'F': basis,
+			  'Cl': basis,
+			  'P': basis,
+			  'Ru': basis}
 
 #grid_size is the divider for h
 grid_size=3
@@ -82,12 +93,11 @@ molecule = read(path + xyzname)
 #view(molecule)
 
 #Align z-axis and cutoff at these atoms, OBS paa retningen.
-align1 = 22
-align2 = 5
+align1 = 2
+align2 = 4
 
 """
 Identify end atoms and align according to z-direction
-
 atoms the furthers from one another
 """
 atoms = identify_and_align(molecule, align1, align2)
@@ -96,17 +106,15 @@ np.save(path + "positions.npy", atoms.get_positions())
 np.save(path + "symbols.npy", atoms.get_chemical_symbols())
 atoms.write(path + "central_region.xyz")
 
-
-"""
-Run and converge calculation
-"""
+# Run and converge calculation
 calc = GPAW(h=h,
             xc=xc,
             basis=basis_full,
             occupations=FermiDirac(width=FDwidth),
             kpts=kpts,
             mode=mode,
-            symmetry={'point_group': False, 'time_reversal': False})
+            symmetry={'point_group': False, 'time_reversal': False},
+            charge=0)
 atoms.set_calculator(calc)
 atoms.get_potential_energy()  # Converge everything!
 Ef = atoms.calc.get_fermi_level()
@@ -133,7 +141,6 @@ plot_basis(atoms, phi_xg, ns=len(bfs), folder_name=path + "basis/ao")
 print('fermi is', Ef)
 
 # MO - basis
-
 H_ao, S_ao = pickle.load(open(path + 'scat_' + basename + '0.pckl', 'rb'))
 H_ao = H_ao[0, 0]
 S_ao = S_ao[0]
@@ -158,46 +165,27 @@ np.save(path + basename + "mo_basis", mo_phi_xg)
 plot_basis(atoms, mo_phi_xg, ns=len(bfs), folder_name=path + "basis/mo")
 print("ready to run transmission")
 
-for n in range(len(eig)):
-    if eig[n] < 0 and eig[n+1]>0:
-       np.savetxt(path + "basis/mo/"+'homo_index.txt',X=['HOMO index is ', n], fmt='%.10s',newline='\n')
 
 #calculate the transmission AJ style
 
 #Variables
-h=h
 co=1e-10
-basis=basis
-vacuum=4
-xc='PBE'
 bias=1e-3
-ef=ef  #redefined for current further down
 gamma=1e0
-estart=-6
-eend=6
+estart, eend = [-6, 6]
 es=1e-2
 inv=""
-mode='lcao'
-wideband=True
 electrode_type="H"
-kpts=(1,1,1)
-FDwidth=0.1
 correction=False
 
 # constants
 eV2au = 1/27.211
-au2eV = 27.211
-au2A = 0.529177249
 
-# n6 = get_nbasis_electrode(electrode_type,basis)
-a = 25.  # Size of unit cell (Angstrom)
-c = a / 2
-d = 0.74
 fname = "basis_{0}__xc_{1}__h_{2}__fdwithd_{3}__kpts_{4}__mode_{5}__vacuum_{6}__".format(basis,xc,h,FDwidth,kpts,mode,vacuum)
 
 basename = "__basis_{0}__h_{1}__cutoff_{2}__xc_{3}__gridsize_{4:.2f}__bias_{5}__ef_{6}__gamma_{7}__e_grid_{8}_{9}_{10}__muliti_grid__type__".format(basis, h, co, xc, grid_size, bias, ef, gamma, estart, eend, es)
-plot_basename = "plots/"+basename
-data_basename = "data/"+basename
+plot_basename = "plots/" + basename
+data_basename = "data/" + basename
 
 bias *= eV2au
 ef *= eV2au
@@ -206,47 +194,43 @@ eend *= eV2au
 es *= eV2au
 gamma *= eV2au
 
-H_ao, S_ao = pickle.load(open(path+'scat_'+fname+'0.pckl', 'rb'))
+H_ao, S_ao = pickle.load(open(path + 'scat_' + fname + '0.pckl', 'rb'))
 H_ao = H_ao[0, 0]
 S_ao = S_ao[0]
 n = len(H_ao)
 
 H_cen = H_ao *eV2au
-S_cen = S_ao
 GamL = np.zeros([n,n])
 GamR = np.zeros([n,n])
 GamL[0,0] = gamma
 GamR[n-1,n-1] = gamma
 
 print("Calculating transmission")
-e_grid = np.arange(estart, eend, es)
-Gamma_L = [GamL for en in range(len(e_grid))]
-Gamma_R = [GamR for en in range(len(e_grid))]
+energy_grid = np.arange(estart, eend, es)
+
+Gamma_L = [GamL for en in range(len(energy_grid))]
+Gamma_R = [GamR for en in range(len(energy_grid))]
+
 Gamma_L = np.swapaxes(Gamma_L, 0, 2)
 Gamma_R = np.swapaxes(Gamma_R, 0, 2)
 
 #put the retarded GF on energy grid
-#Gr = ret_gf_ongrid(e_grid, H_cen, S_cen, Gamma_L, Gamma_R)
+#Gr = ret_gf_ongrid(energy_grid, H_cen, S_ao, Gamma_L, Gamma_R)
 #######
-energy = e_grid
 h_ao = H_cen
-s_ao = S_cen
-gamma_left = Gamma_L
-gamma_right = Gamma_R
-energy_grid = energy
 
 retarded_gf = []
 #Make retarded gf array
 for en in range(len(energy_grid)):
 	print('calculating retarded-GF, step', en)
-	retarded_gf.append(np.linalg.inv(energy[en]*s_ao-h_ao+(1j/2.)*(gamma_left[:, :, en]+gamma_right[:, :, en])))
+	retarded_gf.append(np.linalg.inv(energy_grid[en]*S_ao-h_ao+(1j/2.)*(Gamma_L[:, :, en] + Gamma_R[:, :, en])))
 
 ret_gf = np.array(retarded_gf)
 
 Gr = np.swapaxes(ret_gf, 0, 2)
-trans = calc_trans(e_grid, Gr, Gamma_L, Gamma_R)
-plot_transmission(e_grid*27.211399, trans, path+inv+plot_basename+"trans.png")
-np.save(path+inv+data_basename+'trans_full.npy',[e_grid*27.211399,trans])
+trans = calc_trans(energy_grid, Gr, Gamma_L, Gamma_R)
+plot_transmission(energy_grid*27.211399, trans, path+inv+plot_basename+"trans.png")
+np.save(path+inv+data_basename+'trans_full.npy',[energy_grid*27.211399,trans])
 print("transmission done")
 
 #current parametre, dobbeltcheck hvori ef indgaar for og efter den redefineres
@@ -257,15 +241,10 @@ correction=False
 """
 Calculate the current
 """
-# n6 = get_nbasis_electrode(electrode_type,basis)
-
-a = 25.  # Size of unit cell (Angstrom)
-c = a / 2
-d = 0.74
 # fname = "basis_{0}__xc_{1}__fdwithd_{2}__kpts_{3}__mode_{4}__vacuum_{5}__".format(basis,xc,FDwidth,kpts,mode,vacuum)
 fname = "basis_{0}__xc_{1}__h_{2}__fdwithd_{3}__kpts_{4}__mode_{5}__vacuum_{6}__".format(basis,xc,h,FDwidth,kpts,mode,vacuum)
 
-basename = "__basis_{0}__h_{1}__cutoff_{2}__xc_{3}__gridsize_{4:.2f}__bias_{5}__ef_{6}__gamma_{7}__e_grid_{8}_{9}_{10}__muliti_grid__type__"\
+basename = "__basis_{0}__h_{1}__cutoff_{2}__xc_{3}__gridsize_{4:.2f}__bias_{5}__ef_{6}__gamma_{7}__energy_grid_{8}_{9}_{10}__muliti_grid__type__"\
                 .format(basis, h, co, xc, grid_size, bias, ef, gamma, estart, eend, es)
 plot_basename = "plots/"+basename
 data_basename = "data/"+basename
@@ -284,6 +263,9 @@ GamL = np.zeros([n,n])
 GamR = np.zeros([n,n])
 GamL[0,0] = gamma
 GamR[n-1,n-1] = gamma
+
+
+
 
 print("Calculating transmission")
 """transmission"""
@@ -321,13 +303,16 @@ for n in range(len(eig)):
         LUMO = eig[n+1]
         midgap = (HOMO+LUMO)/2.0
 
+       	np.savetxt(path + "basis/mo/"+'homo_index.txt',X=['HOMO index is ', n], fmt='%.10s',newline='\n')
+       	break
+
 hl_gap = ['HOMO er ', HOMO*27.211399, 'LUMO er ', LUMO*27.211399, 'mid-gap er ', midgap*27.211399]
 np.savetxt(path+'HOMO_LUMO.txt',X=hl_gap, fmt='%.10s',newline='\n')
 
 Gr_mo = ret_gf_ongrid(e_grid, H_mo, S_mo, Gamma_L_mo, Gamma_R_mo)
-trans_mo, trans_mo_trace = calc_trans_mo(e_grid, Gr_mo, Gamma_L_mo, Gamma_R_mo)
-plot_transmission(e_grid, trans_mo_trace, path+inv+plot_basename+"trans_mo.png")
-np.save(path+inv+data_basename+'trans_full_mo.npy',[e_grid,trans_mo_trace])
+trans_mo = calc_trans(e_grid, Gr_mo, Gamma_L_mo, Gamma_R_mo)
+plot_transmission(e_grid, trans_mo, path+inv+plot_basename+"trans_mo.png")
+np.save(path+inv+data_basename+'trans_full_mo.npy',[e_grid,trans_mo])
 
 """Current with fermi functions"""
 fR, fL = fermi_ongrid(e_grid, ef, bias)
