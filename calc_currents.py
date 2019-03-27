@@ -67,6 +67,19 @@ kpts = (1, 1, 1)
 mode = 'lcao'
 h = 0.20
 vacuum = 4
+
+# constants
+eV2au = 1/Hartree
+
+# Variables
+co = 1e-10 * eV2au
+bias = 1e-3 * eV2au
+gamma = 1e0 * eV2au
+ef = ef * eV2au # If ef has been set to a custom value.
+estart, eend = [-6 * eV2au, 6 * eV2au]
+es = 1e-2 * eV2au
+correction = False
+
 basis_full = {'H': 'sz',
               'C': basis,
               'S': basis,
@@ -149,9 +162,9 @@ S_mo = np.dot(np.dot(vec.T.conj(), S_ao), vec)
 H_mo = np.dot(np.dot(vec.T, H_ao), vec)
 
 rot_mat = vec
+# Apparently the 'asc'-function does something - do not remove or it'll break the MO's
 c_fo_xi = asc(rot_mat.real.T)  # coefficients
 mo_phi_xg = calc.wfs.basis_functions.gd.zeros(len(c_fo_xi))
-wfs = calc.wfs
 gd0 = calc.wfs.gd
 calc.wfs.basis_functions.lcao_to_grid(c_fo_xi, mo_phi_xg, -1)
 np.save(path + basename + "mo_energies", eig)
@@ -159,35 +172,14 @@ np.save(path + basename + "mo_basis", mo_phi_xg)
 plot_basis(atoms, mo_phi_xg, ns=len(bfs), folder_name=path + "basis/mo")
 print("ready to run transmission")
 
-
 # calculate the transmission AJ style
-
-# Variables
-co = 1e-10
-bias = 1e-3
-gamma = 1e0
-estart, eend = [-6, 6]
-es = 1e-2
-electrode_type = "H"
-correction = False
-
-# constants
-eV2au = 1/Hartree
-
 fname = "basis_{0}__xc_{1}__h_{2}__fdwithd_{3}__kpts_{4}__mode_{5}__vacuum_{6}__".format(
     basis, xc, h, FDwidth, kpts, mode, vacuum)
 
-basename = "__basis_{0}__h_{1}__cutoff_{2}__xc_{3}__gridsize_{4:.2f}__bias_{5}__ef_{6}__gamma_{7}__energy_grid_{8}_{9}_{10}__muliti_grid__type__".format(
-    basis, h, co, xc, grid_size, bias, ef, gamma, estart, eend, es)
+basename = "__basis_{0}__h_{1}__cutoff_{2}__xc_{3}__gridsize_{4:.2f}__bias_{5}__ef_{6}__gamma_{7}__energy_grid_{8}_{9}_{10}__multi_grid__type__".format(
+    basis, h, co, xc, grid_size, bias / eV2au, ef / eV2au, gamma / eV2au, estart / eV2au, eend / eV2au, es / eV2au)
 plot_basename = "plots/" + basename
 data_basename = "data/" + basename
-
-bias *= eV2au
-ef *= eV2au
-estart *= eV2au
-eend *= eV2au
-es *= eV2au
-gamma *= eV2au
 
 H_ao, S_ao = pickle.load(open(path + 'scat_' + fname + '0.pckl', 'rb'))
 H_ao = H_ao[0, 0] * eV2au
@@ -218,26 +210,9 @@ np.save(path+data_basename+'trans_full.npy', [energy_grid*Hartree, trans])
 
 print("transmission done")
 
-# current parametre, dobbeltcheck hvori ef indgaar for og efter den redefineres
-bias = 1e-3
-ef = 0
-# De genomregnes fra eV til au laengere nede
-correction = False
 """
 Calculate the current
 """
-# fname = "basis_{0}__xc_{1}__fdwithd_{2}__kpts_{3}__mode_{4}__vacuum_{5}__".format(basis,xc,FDwidth,kpts,mode,vacuum)
-fname = "basis_{0}__xc_{1}__h_{2}__fdwithd_{3}__kpts_{4}__mode_{5}__vacuum_{6}__".format(
-    basis, xc, h, FDwidth, kpts, mode, vacuum)
-
-basename = "__basis_{0}__h_{1}__cutoff_{2}__xc_{3}__gridsize_{4:.2f}__bias_{5}__ef_{6}__gamma_{7}__energy_grid_{8}_{9}_{10}__muliti_grid__type__"\
-    .format(basis, h, co, xc, grid_size, bias, ef, gamma, estart, eend, es)
-plot_basename = "plots/" + basename
-data_basename = "data/" + basename
-
-bias *= eV2au
-ef *= eV2au
-
 eig, vec = np.linalg.eig(np.dot(np.linalg.inv(S_ao), H_ao))
 order = np.argsort(eig)
 eig = eig.take(order)
@@ -256,6 +231,11 @@ Gamma_R_mo = [GamR_mo for en in range(len(energy_grid))]
 Gamma_L_mo = np.swapaxes(Gamma_L_mo, 0, 2)
 Gamma_R_mo = np.swapaxes(Gamma_R_mo, 0, 2)
 
+Gr_mo = ret_gf_ongrid(energy_grid, H_mo, S_mo, Gamma_L_mo, Gamma_R_mo)
+trans_mo = calc_trans(energy_grid, Gr_mo, Gamma_L_mo, Gamma_R_mo)
+plot_transmission(energy_grid, trans_mo, path + plot_basename + "trans_mo.png")
+np.save(path + data_basename + 'trans_full_mo.npy', [energy_grid, trans_mo])
+
 np.savetxt(path+'eig_spectrum.txt', X=eig*Hartree, fmt='%.10s', newline='\n',)
 # find HOMO and LUMO
 for n in range(len(eig)):
@@ -271,10 +251,6 @@ for n in range(len(eig)):
 hl_gap = ['HOMO er ', HOMO*Hartree, 'LUMO er ', LUMO*Hartree, 'mid-gap er ', midgap*Hartree]
 np.savetxt(path+'HOMO_LUMO.txt', X=hl_gap, fmt='%.10s', newline='\n')
 
-Gr_mo = ret_gf_ongrid(energy_grid, H_mo, S_mo, Gamma_L_mo, Gamma_R_mo)
-trans_mo = calc_trans(energy_grid, Gr_mo, Gamma_L_mo, Gamma_R_mo)
-plot_transmission(energy_grid, trans_mo, path + plot_basename + "trans_mo.png")
-np.save(path + data_basename + 'trans_full_mo.npy', [energy_grid, trans_mo])
 
 """Current with fermi functions"""
 fR, fL = fermi_ongrid(energy_grid, ef, bias)
@@ -282,7 +258,7 @@ dE = energy_grid[1] - energy_grid[0]
 current_trans = (1/(2*np.pi))*np.array([trans[en].real *
                                         (fL[en]-fR[en])*dE for en in range(len(energy_grid))]).sum()
 
-np.save(path+data_basename+"current_trans.npy", current_trans)
+np.save(path + data_basename + "current_trans.npy", current_trans)
 
 Sigma_lesser = lesser_se_ongrid(energy_grid, Gamma_L, Gamma_R, fL, fR)
 G_lesser = lesser_gf_ongrid(energy_grid, Gr, Sigma_lesser)
@@ -301,7 +277,6 @@ Sigma_r = 1j*np.zeros(Gamma_L.shape)
 for i in range(len(energy_grid)):
     Sigma_r[:, :, i] = -1j/2. * (Gamma_L[:, :, i] + Gamma_R[:, :, i])  # + V_pot
 
-basis = np.load(path+fname+"ao_basis_grid.npy")
 Gles = Gr_approx.dot(GamL).dot(Gr_approx.T.conj())
 Gles *= bias
 
@@ -315,14 +290,14 @@ Tt = GamL.dot(Gr_approx).dot(GamR).dot(Gr_approx.T.conj())
 Tt_mo = GamL_mo.dot(Gr_approx_mo).dot(GamR_mo).dot(Gr_approx_mo.T.conj())
 current_dV = (bias/(2*np.pi))*Tt.trace()
 
-np.save(path+data_basename+"matrices_dV.npy", [Gr_approx, Gles, GamL])
-np.save(path+data_basename+"matrices_mo_dV.npy", [Gr_approx_mo, Gles_mo, GamL_mo])
-np.save(path+data_basename+"trans_dV.npy", [ef, Tt.trace()])
-np.save(path+data_basename+"trans_mo_dV.npy", [ef, Tt_mo.trace()])
-np.save(path+data_basename+"current_dV.npy", current_dV)
+np.save(path + data_basename + "matrices_dV.npy", [Gr_approx, Gles, GamL])
+np.save(path + data_basename + "matrices_mo_dV.npy", [Gr_approx_mo, Gles_mo, GamL_mo])
+np.save(path + data_basename + "trans_dV.npy", [ef, Tt.trace()])
+np.save(path + data_basename + "trans_mo_dV.npy", [ef, Tt_mo.trace()])
+np.save(path + data_basename + "current_dV.npy", current_dV)
 
-basis_data = np.load(path+fname+"ao_basis_grid.npy")
-phi_xg, gd0 = basis_data
+phi_xg, gd0 = np.load(path + fname + "ao_basis_grid.npy")
+
 x_cor = gd0.coords(0)
 y_cor = gd0.coords(1)
 z_cor = gd0.coords(2)
@@ -344,7 +319,7 @@ multiplier = 1/(3*j_z_cut[::2, ::2, ::2].max())
 cut_off = j_z_cut[::2, ::2, ::2].max()/20.
 
 # sjette sidste arg er divider for real space grid, multiplier giver tykkere diameter
-plot_current(jx_c, jy_c, jz_c, x_cor, y_cor, z_cor, path+"current",
+plot_current(jx_c, jy_c, jz_c, x_cor, y_cor, z_cor, path + "current",
              grid_size, multiplier, cut_off, path, align1, align2)
 
 if correction == True:
