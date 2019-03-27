@@ -123,6 +123,7 @@ calc = GPAW(h=h,
             mode=mode,
             symmetry={'point_group': False, 'time_reversal': False},
             charge=0)
+
 atoms.set_calculator(calc)
 atoms.get_potential_energy()  # Converge everything!
 Ef = atoms.calc.get_fermi_level()
@@ -130,27 +131,33 @@ Ef = atoms.calc.get_fermi_level()
 wfs = calc.wfs
 kpt = monkhorst_pack((1, 1, 1))
 
-basename = "basis_{0}__xc_{1}__h_{2}__fdwithd_{3}__kpts_{4}__mode_{5}__vacuum_{6}__".format(
+fname = "basis_{0}__xc_{1}__h_{2}__fdwithd_{3}__kpts_{4}__mode_{5}__vacuum_{6}__".format(
     basis, xc, h, FDwidth, kpts, mode, vacuum)
+basename = "__basis_{0}__h_{1}__cutoff_{2}__xc_{3}__gridsize_{4:.2f}__bias_{5}__ef_{6}__gamma_{7}__energy_grid_{8}_{9}_{10}__multi_grid__type__".format(
+    basis, h, co, xc, grid_size, bias / eV2au, ef / eV2au, gamma / eV2au, estart / eV2au, eend / eV2au, es / eV2au)
 
-dump_hamiltonian_parallel(path + 'scat_' + basename, atoms, direction='z')
+plot_basename = "plots/" + basename
+data_basename = "data/" + basename
 
+dump_hamiltonian_parallel(path + 'scat_' + fname, atoms, direction='z')
+
+# Saves the AO basis as .cube files.
 a_list = range(0, len(atoms))
 bfs = get_bfi2(symbols, basis_full, range(len(a_list)))
 rot_mat = np.diag(v=np.ones(len(bfs)))
 c_fo_xi = asc(rot_mat.real.T)  # coefficients
 phi_xg = calc.wfs.basis_functions.gd.zeros(len(c_fo_xi))
-wfs = calc.wfs
 gd0 = calc.wfs.gd
 calc.wfs.basis_functions.lcao_to_grid(c_fo_xi, phi_xg, -1)
-np.save(path + basename + "ao_basis_grid", [phi_xg, gd0])
+np.save(path + fname + "ao_basis_grid", [phi_xg, gd0])
 plot_basis(atoms, phi_xg, ns=len(bfs), folder_name=path + "basis/ao")
 print('fermi is', Ef)
 
 # MO - basis
-H_ao, S_ao = pickle.load(open(path + 'scat_' + basename + '0.pckl', 'rb'))
-H_ao = H_ao[0, 0]
+H_ao, S_ao = pickle.load(open(path + 'scat_' + fname + '0.pckl', 'rb'))
+H_ao = H_ao[0, 0] * eV2au
 S_ao = S_ao[0]
+n = len(H_ao)
 
 eig, vec = np.linalg.eig(np.dot(np.linalg.inv(S_ao), H_ao))
 order = np.argsort(eig)
@@ -161,38 +168,25 @@ vec = vec / np.sqrt(np.diag(S_mo))
 S_mo = np.dot(np.dot(vec.T.conj(), S_ao), vec)
 H_mo = np.dot(np.dot(vec.T, H_ao), vec)
 
-rot_mat = vec
 # Apparently the 'asc'-function does something - do not remove or it'll break the MO's
-c_fo_xi = asc(rot_mat.real.T)  # coefficients
+# Save the MO basis as .cube files
+c_fo_xi = asc(vec.real.T)  # coefficients
 mo_phi_xg = calc.wfs.basis_functions.gd.zeros(len(c_fo_xi))
 gd0 = calc.wfs.gd
 calc.wfs.basis_functions.lcao_to_grid(c_fo_xi, mo_phi_xg, -1)
-np.save(path + basename + "mo_energies", eig)
-np.save(path + basename + "mo_basis", mo_phi_xg)
+np.save(path + fname + "mo_energies", eig)
+np.save(path + fname + "mo_basis", mo_phi_xg)
 plot_basis(atoms, mo_phi_xg, ns=len(bfs), folder_name=path + "basis/mo")
 print("ready to run transmission")
 
-# calculate the transmission AJ style
-fname = "basis_{0}__xc_{1}__h_{2}__fdwithd_{3}__kpts_{4}__mode_{5}__vacuum_{6}__".format(
-    basis, xc, h, FDwidth, kpts, mode, vacuum)
-
-basename = "__basis_{0}__h_{1}__cutoff_{2}__xc_{3}__gridsize_{4:.2f}__bias_{5}__ef_{6}__gamma_{7}__energy_grid_{8}_{9}_{10}__multi_grid__type__".format(
-    basis, h, co, xc, grid_size, bias / eV2au, ef / eV2au, gamma / eV2au, estart / eV2au, eend / eV2au, es / eV2au)
-plot_basename = "plots/" + basename
-data_basename = "data/" + basename
-
-H_ao, S_ao = pickle.load(open(path + 'scat_' + fname + '0.pckl', 'rb'))
-H_ao = H_ao[0, 0] * eV2au
-S_ao = S_ao[0]
-n = len(H_ao)
-
+# Calculate the transmission AJ style - AO basis
+print("Calculating transmission")
 GamL = np.zeros([n, n])
 GamR = np.zeros([n, n])
 
 GamL[0, 0] = gamma
 GamR[n - 1, n - 1] = gamma
 
-print("Calculating transmission")
 energy_grid = np.arange(estart, eend, es)
 
 Gamma_L = [GamL for en in range(len(energy_grid))]
@@ -210,17 +204,15 @@ np.save(path+data_basename+'trans_full.npy', [energy_grid*Hartree, trans])
 
 print("transmission done")
 
-"""
-Calculate the current
-"""
-eig, vec = np.linalg.eig(np.dot(np.linalg.inv(S_ao), H_ao))
-order = np.argsort(eig)
-eig = eig.take(order)
-vec = vec.take(order, axis=1)
-S_mo = np.dot(np.dot(vec.T.conj(), S_ao), vec)
-vec = vec/np.sqrt(np.diag(S_mo))
-S_mo = np.dot(np.dot(vec.T.conj(), S_ao), vec)
-H_mo = np.dot(np.dot(vec.T, H_ao), vec)
+# Calculate transmission with MO basis 
+# eig, vec = np.linalg.eig(np.dot(np.linalg.inv(S_ao), H_ao))
+# order = np.argsort(eig)
+# eig = eig.take(order)
+# vec = vec.take(order, axis=1)
+# S_mo = np.dot(np.dot(vec.T.conj(), S_ao), vec)
+# vec = vec/np.sqrt(np.diag(S_mo))
+# S_mo = np.dot(np.dot(vec.T.conj(), S_ao), vec)
+# H_mo = np.dot(np.dot(vec.T, H_ao), vec)
 
 GamL_mo = np.dot(np.dot(vec.T, GamL), vec)
 GamR_mo = np.dot(np.dot(vec.T, GamR), vec)
