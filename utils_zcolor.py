@@ -27,13 +27,11 @@ import time
 
 def plot_basis(atoms, phi_xG, ns, folder_name='./basis'):
     """
-    r: coefficients of atomcentered basis functions
+    r: coefficients of atom-centered basis functions
     atoms: Atoms-object
     ns: indices of bfs functions to plot.
     """
-    # for n, phi in zip(ns, phi_xG.take(ns, axis=0)):
     for n, phi in enumerate(phi_xG):
-        # print "writing %d of %d" %(n, len(ns)),
         write('%s/%d.cube' % (folder_name, n), atoms, data=phi)
 
 # TODO: Implement the use of einsum. Slightly faster overall compared to np.linalg.norm
@@ -410,8 +408,13 @@ def fermi_ongrid(energy_grid, e_f, bias):
     """
     FD on grid
     """
-    f_left = [fermi(en, e_f + bias/2.) for en in energy_grid]
-    f_right = [fermi(en, e_f - bias/2.) for en in energy_grid]
+    f_left = []
+    f_right = []
+
+    for en in energy_grid:
+        f_left.append(fermi(en, e_f + bias/2.))
+        f_right.append(fermi(en, e_f - bias/2.))
+
     return f_left, f_right
 
 
@@ -419,9 +422,9 @@ def lesser_se_ongrid(energy_grid, gamma_left, gamma_right, f_left, f_right):
     """
     Lesser self energy on grid
     """
-    sigma_les = np.array([1j*(gamma_left[:, :, en]*f_left[en] + gamma_right[:, :, en]*f_right[en])
-                          for en in range(len(energy_grid))])
+    sigma_les = np.array([1j*(gamma_left[:, :, en]*f_left[en] + gamma_right[:, :, en]*f_right[en]) for en in range(len(energy_grid))])
     sigma_les = np.swapaxes(sigma_les, 0, 2)
+    
     return sigma_les
 
 
@@ -429,10 +432,9 @@ def lesser_gf_ongrid(energy_grid, ret_gf, sigma_les):
     """
     Lesser gf on grid
     """
-    lesser_gf = np.array([np.dot(np.dot(
-        ret_gf[:, :, en], sigma_les[:, :, en]), ret_gf[:, :, en].T.conj())
-        for en in range(len(energy_grid))])
+    lesser_gf = np.array([np.dot(np.dot(ret_gf[:, :, en], sigma_les[:, :, en]), ret_gf[:, :, en].T.conj()) for en in range(len(energy_grid))])
     lesser_gf = np.swapaxes(lesser_gf, 0, 2)
+
     return lesser_gf
 
 
@@ -440,10 +442,9 @@ def lesser_gf_ongrid2(energy_grid, ret_gf, gammaL):
     """
     Lesser gf on grid Evers way
     """
-    lesser_gf = np.array([np.dot(np.dot(
-        ret_gf[:, :, en], 1j*gammaL[:, :, en]), ret_gf[:, :, en].T.conj())
-        for en in range(len(energy_grid))])
+    lesser_gf = np.array([np.dot(np.dot(ret_gf[:, :, en], 1j*gammaL[:, :, en]), ret_gf[:, :, en].T.conj()) for en in range(len(energy_grid))])
     lesser_gf = np.swapaxes(lesser_gf, 0, 2)
+    
     return lesser_gf
 
 
