@@ -967,9 +967,9 @@ def Jc_current(Gles, path, data_basename, fname):
     y_cor = gd0.coords(1)
     z_cor = gd0.coords(2)
 
-    dx = x_cor[1]-x_cor[0]
-    dy = y_cor[1]-y_cor[0]
-    dz = z_cor[1]-z_cor[0]
+    dx = x_cor[1] - x_cor[0]
+    dy = y_cor[1] - y_cor[0]
+    dz = z_cor[1] - z_cor[0]
 
     bf_list = np.arange(0, n, 1)
     # bf_list =  np.arange(6,10,1) # np.arange(37,41,1)
@@ -1230,67 +1230,68 @@ def plot_current(jx, jy, jz, x, y, z, savename, s, amp, co, path, align1, align2
     x = x[::s]*au2A
     y = y[::s]*au2A
     z = z[::s]*au2A
+
     jz = jz[::s, ::s, ::s]
     jy = jy[::s, ::s, ::s]
     jx = jx[::s, ::s, ::s]
 
-    with open(savename+"_zcolor.spt", "w") as text_file:
-        text_file.write('load "file:$SCRIPT_PATH$/central_region.xyz" \n'.format(path))
-        text_file.write('write "$SCRIPT_PATH$/central_region2.xyz" \n'.format(path))
-        text_file.write('load "file:$SCRIPT_PATH$/central_region2.xyz" \n'.format(path))
-        a = 0
+    cyl_list = []
+    z_list = []
 
-        for ix, x2 in enumerate(x):
-            for iy, y2 in enumerate(y):
-                for iz, z2 in enumerate(z):
-                    norm2 = np.sqrt(jx[ix, iy, iz]**2 + jy[ix, iy, iz]**2 + jz[ix, iy, iz]**2)
-                    norm = np.sqrt(jz[ix, iy, iz]**2)
+    z_list.append('load "file:$SCRIPT_PATH$/central_region.xyz" \n'.format(path))
+    z_list.append('write "$SCRIPT_PATH$/central_region2.xyz" \n'.format(path))
+    z_list.append('load "file:$SCRIPT_PATH$/central_region2.xyz" \n'.format(path))
 
-                    # and norm < co*1000:
-                    if norm2 > co and z2 > refcoord1[2] and z2 < refcoord2[2]:
-                        rel_z = jz[ix, iy, iz]/norm2
-                        color = z_colorlist[int(np.round(rel_z, decimals=2)*100)+100]
+    cyl_list.append('load "file:$SCRIPT_PATH$/central_region.xyz" \n'.format(path))
+    cyl_list.append('write "$SCRIPT_PATH$/central_region2.xyz" \n'.format(path))
+    cyl_list.append('load "file:$SCRIPT_PATH$/central_region2.xyz" \n'.format(path))
 
-                        text_file.write(
-                            "draw arrow{0} arrow color {8} diameter {7} {{ {1},{2},{3} }} {{ {4},{5},{6} }} \n".
-                            format(a, x2 - jx[ix, iy, iz]/(4*norm2), y2 - jy[ix, iy, iz]/(4*norm2), z2 - jz[ix, iy, iz]/(4*norm2),
-                                   (x2 + jx[ix, iy, iz]/(4*norm2)),
-                                   (y2 + jy[ix, iy, iz]/(4*norm2)),
-                                   (z2 + jz[ix, iy, iz]/(4*norm2)),
-                                   norm*amp,
-                                   color))
-                    a += 1
-        text_file.write("set defaultdrawarrowscale 0.1 \n")
-        text_file.write('rotate 90 \n')
-        text_file.write('background white \n')
+    a = 0
+    size = 4 # or 8 for smaller arrows
+    
+    for ix, x2 in enumerate(x):
+        for iy, y2 in enumerate(y):
+            for iz, z2 in enumerate(z):
+                norm2 = np.sqrt(jx[ix, iy, iz]**2 + jy[ix, iy, iz]**2 + jz[ix, iy, iz]**2)
+                norm = np.sqrt(jz[ix, iy, iz]**2)
+
+                if norm2 > co and z2 > refcoord1[2] and z2 < refcoord2[2]:
+                    rel_z = jz[ix, iy, iz]/norm2
+                    z_color = z_colorlist[int(np.round(rel_z, decimals=2)*100) + 100]
+
+                    rel_phi = (jy[ix, iy, iz]*np.cos(np.arctan2(y2 - refcoord1[1], x2 - refcoord1[0])) - jx[ix, iy, iz]*np.sin(np.arctan2(y2 - refcoord1[1], x2-refcoord1[0])))/norm2
+                    cyl_color = cyl_colorlist[int(np.round(rel_phi, decimals=2)*100) + 100]
+
+                    z_list.append("draw arrow{0} arrow color {8} diameter {7} {{ {1},{2},{3} }} {{ {4},{5},{6} }} \n".
+                    format(a,
+                           x2 - jx[ix, iy, iz]/(size*norm2), y2 - jy[ix, iy, iz]/(size*norm2), z2 - jz[ix, iy, iz]/(size*norm2),
+                           (x2 + jx[ix, iy, iz]/(size*norm2)),
+                           (y2 + jy[ix, iy, iz]/(size*norm2)),
+                           (z2 + jz[ix, iy, iz]/(size*norm2)),
+                           norm*amp,
+                           z_color))
+
+                    cyl_list.append("draw arrow{0} arrow color {8} diameter {7} {{ {1},{2},{3} }} {{ {4},{5},{6} }} \n".
+                    format(a,
+                           x2 - jx[ix, iy, iz]/(size*norm2), y2 - jy[ix, iy, iz]/(size*norm2), z2 - jz[ix, iy, iz]/(size*norm2),
+                           (x2 + jx[ix, iy, iz]/(size*norm2)),
+                           (y2 + jy[ix, iy, iz]/(size*norm2)),
+                           (z2 + jz[ix, iy, iz]/(size*norm2)),
+                           norm*amp,
+                           cyl_color))
+                a += 1
+
+    z_list.append("set defaultdrawarrowscale 0.1 \n")
+    z_list.append('rotate 90 \n')
+    z_list.append('background white \n')
+
+
+    cyl_list.append("set defaultdrawarrowscale 0.1 \n")
+    cyl_list.append('rotate 90 \n')
+    cyl_list.append('background white \n')
+
+    with open(savename + "_zcolor.spt", "w") as text_file:
+        text_file.writelines(z_list)
 
     with open(savename + "_cylcolor.spt", "w") as text_file:
-        text_file.write('load "file:$SCRIPT_PATH$/central_region.xyz" \n'.format(path))
-        text_file.write('write "$SCRIPT_PATH$/central_region2.xyz" \n'.format(path))
-        text_file.write('load "file:$SCRIPT_PATH$/central_region2.xyz" \n'.format(path))
-        a = 0
-
-        for ix, x2 in enumerate(x):
-            for iy, y2 in enumerate(y):
-                for iz, z2 in enumerate(z):
-                    norm2 = np.sqrt(jx[ix, iy, iz]**2 + jy[ix, iy, iz]**2 + jz[ix, iy, iz]**2)
-                    norm = np.sqrt(jz[ix, iy, iz]**2)
-
-                    # and norm < co*1000:
-                    if norm2 > co and z2 > refcoord1[2] and z2 < refcoord2[2]:
-                        rel_phi = (jy[ix, iy, iz]*np.cos(np.arctan2(y2 - refcoord1[1], x2 - refcoord1[0])) -
-                                   jx[ix, iy, iz]*np.sin(np.arctan2(y2 - refcoord1[1], x2-refcoord1[0])))/norm2
-                        color = cyl_colorlist[int(np.round(rel_phi, decimals=2)*100) + 100]
-
-                        text_file.write(
-                            "draw arrow{0} arrow color {8} diameter {7} {{ {1},{2},{3} }} {{ {4},{5},{6} }} \n".
-                            format(a, x2 - jx[ix, iy, iz]/(4*norm2), y2 - jy[ix, iy, iz]/(4*norm2), z2 - jz[ix, iy, iz]/(4*norm2),
-                                   (x2 + jx[ix, iy, iz]/(4*norm2)),
-                                   (y2 + jy[ix, iy, iz]/(4*norm2)),
-                                   (z2 + jz[ix, iy, iz]/(4*norm2)),
-                                   norm*amp,
-                                   color))
-                    a += 1
-        text_file.write("set defaultdrawarrowscale 0.1 \n")
-        text_file.write('rotate 90 \n')
-        text_file.write('background white \n')
+        text_file.writelines(cyl_list)
