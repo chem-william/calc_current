@@ -112,14 +112,14 @@ calc = GPAW(h=h,
             kpts=kpts,
             mode=mode,
             symmetry={'point_group': False, 'time_reversal': False},
-            charge=0)
+            charge=0,
+            txt='logfile.txt')
 
 atoms.set_calculator(calc)
 atoms.get_potential_energy()  # Converge everything!
 Ef = atoms.calc.get_fermi_level()
 print('fermi is', Ef)
 
-# wfs = calc.wfs
 kpt = monkhorst_pack((1, 1, 1))
 
 fname = "basis_{0}__xc_{1}__h_{2}__fdwithd_{3}__kpts_{4}__mode_{5}__vacuum_{6}__".format(
@@ -171,7 +171,7 @@ trans = calc_trans(energy_grid, Gr, Gamma_L, Gamma_R)
 plot_transmission(energy_grid*Hartree, trans, path + plot_basename + "trans.png")
 np.save(path + data_basename + 'trans_full.npy', [energy_grid*Hartree, trans])
 
-print("transmission done")
+print("Transmission done")
 
 # Calculate transmission with MO basis
 # Convert AO's to MO's
@@ -230,12 +230,6 @@ dE = energy_grid[1] - energy_grid[0]
 current_trans = (1/(2*np.pi))*np.array([trans[en].real * (fL[en]-fR[en])*dE for en in range(len(energy_grid))]).sum()
 np.save(path + data_basename + "current_trans.npy", current_trans)
 
-# Sigma_lesser = lesser_se_ongrid(energy_grid, Gamma_L, Gamma_R, fL, fR)
-# G_lesser = lesser_gf_ongrid(energy_grid, Gr, Sigma_lesser)
-# G_lesser2 = lesser_gf_ongrid2(energy_grid, Gr, Gamma_L)
-
-#    np.save(path + data_basename + "matrices.npy",[H_ao, S_ao, Gr, G_lesser, energy_grid])
-
 """Current approx at low temp"""
 Sigma_r = -1j/2. * (GamL + GamR)  # + V_pot
 
@@ -243,10 +237,6 @@ Sigma_r = -1j/2. * (GamL + GamR)  # + V_pot
 plot_complex_matrix(Sigma_r, path + "Sigma_r")
 
 Gr_approx = retarded_gf2(H_ao, S_ao, ef, Sigma_r)
-
-# Sigma_r = 1j*np.zeros(Gamma_L.shape)
-# for i in range(len(energy_grid)):
-#     Sigma_r[:, :, i] = -1j/2. * (Gamma_L[:, :, i] + Gamma_R[:, :, i])  # + V_pot
 
 Gles = np.dot(np.dot(Gr_approx, GamL), Gr_approx.T.conj())
 Gles *= bias
@@ -268,20 +258,10 @@ np.save(path + data_basename + "trans_dV.npy", [ef, Tt.trace()])
 np.save(path + data_basename + "trans_mo_dV.npy", [ef, Tt_mo.trace()])
 np.save(path + data_basename + "current_dV.npy", current_dV)
 
-_, gd0 = np.load(path + fname + "ao_basis_grid.npy")
-
-x_cor = gd0.coords(0)
-y_cor = gd0.coords(1)
-z_cor = gd0.coords(2)
-
 """Non corrected current"""
 current_c, jx_c, jy_c, jz_c, x_cor, y_cor, z_cor, gd0 = Jc_current(Gles, path, data_basename, fname)
 np.save(path + data_basename + "current_c_all.npy", np.array([jx_c, jy_c, jz_c, x_cor, y_cor, z_cor]))
 np.save(path + data_basename + "current_c.npy", np.array([current_c, x_cor, y_cor, z_cor]))
-
-dx = (x_cor[1] - x_cor[0])
-dy = (y_cor[1] - y_cor[0])
-dz = (z_cor[1] - z_cor[0])
 
 SI = 31
 EI = -31
