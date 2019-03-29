@@ -136,23 +136,12 @@ dump_hamiltonian_parallel(path + 'scat_' + fname, atoms, direction='z')
 a_list = range(0, len(atoms))
 bfs = get_bfi2(symbols, basis_full, range(len(a_list)))
 rot_mat = np.diag(v=np.ones(len(bfs)))
-print('doing nothing')
-print(rot_mat)
-print(rot_mat.flags)
-
 c_fo_xi = asc(rot_mat.real.T)  # coefficients
-print('after asc')
-print(asc(rot_mat))
-print(asc(rot_mat).flags)
-print('equal?')
-print(np.array_equal(rot_mat, asc(rot_mat)))
-
 phi_xg = calc.wfs.basis_functions.gd.zeros(len(c_fo_xi))
 gd0 = calc.wfs.gd
 calc.wfs.basis_functions.lcao_to_grid(c_fo_xi, phi_xg, -1)
 np.save(path + fname + "ao_basis_grid", [phi_xg, gd0])
 plot_basis(atoms, phi_xg, ns=len(bfs), folder_name=path + "basis/ao")
-
 
 # Calculate the transmission AJ style - AO basis
 H_ao, S_ao = pickle.load(open(path + 'scat_' + fname + '0.pckl', 'rb'))
