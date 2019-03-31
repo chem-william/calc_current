@@ -316,21 +316,8 @@ def calc_trans(energy_grid, gret, gamma_left, gamma_right):
     from calculating efficiency outweighs just doing the calculation.
     """
     trans = np.array([np.dot(np.dot(np.dot(gamma_left[:, :, en], gret[:, :, en]), gamma_right[:, :, en]), gret[:, :, en].T.conj()).trace() for en in range(len(energy_grid))])
-    
+
     return trans
-
-
-# def calc_trans_mo(energy_grid, gret, gamma_left, gamma_right):
-#     """
-#     Landauer Transmission
-#     """
-#     trans = np.array([np.dot(np.dot(np.dot(
-#         gamma_left[:, :, en], gret[:, :, en]),
-#         gamma_right[:, :, en]), gret[:, :, en].T.conj())
-#         for en in range(len(energy_grid))])
-#     trans_trace = np.array([trans[en, :, :].trace() for en in range(len(energy_grid))])
-#     return trans, trans_trace
-
 
 def plot_complex_matrix(matrix, save_name):
     fig, axes = plt.subplots(nrows=1, ncols=2)
@@ -344,7 +331,6 @@ def plot_complex_matrix(matrix, save_name):
 
     plt.savefig(save_name)
     plt.close()
-
 
 def plot_real_matrix(matrix, save_name):
     fig, axes = plt.subplots(nrows=1, ncols=1)
@@ -400,8 +386,11 @@ def fermi(energy, mu_):
     """
     Fermi-Dirac distribution
     """
+    # Less computationally robust method.
+    # old = 1./(np.exp((energy - mu_)/kbt_) + 1.)
     kbt_ = 25e-6
-    return 1./(np.exp((energy - mu_)/kbt_) + 1.)
+
+    return 0.5 + 0.5*np.tanh(-((energy - mu_)/kbt_)/2)
 
 
 def fermi_ongrid(energy_grid, e_f, bias):
@@ -780,10 +769,10 @@ def put_matrix_onto_grid(mat, basis, gd0):
     x_cor = gd0.coords(0)
     y_cor = gd0.coords(1)
     z_cor = gd0.coords(2)
-    dx = x_cor[1]-x_cor[0]
-    dy = y_cor[1]-y_cor[0]
-    dz = z_cor[1]-z_cor[0]
-    dA = (x_cor[1]-x_cor[0])*(y_cor[1]-y_cor[0])
+    dx = x_cor[1] - x_cor[0]
+    dy = y_cor[1] - y_cor[0]
+    dz = z_cor[1] - z_cor[0]
+    dA = (x_cor[1] - x_cor[0])*(y_cor[1] - y_cor[0])
 
     res = 1j*gd0.zeros(1)[0]
     for i in range(len(bfs)):
@@ -801,6 +790,7 @@ def calc_production(Sigma_l, Gr, Sigma_r, Gles, basis, gd0, e_grid):
     S3 = 0j*np.zeros(Gr.shape)
     S4 = 0j*np.zeros(Gr.shape)
     dE = e_grid[1]-e_grid[0]
+
     for i in range(len(e_grid)):
         S1[:, :, i] = (Sigma_l[:, :, i].dot(Gr[:, :, i].T.conj()))*dE/2*np.pi
         S2[:, :, i] = (Sigma_r[:, :, i].dot(Gles[:, :, i]))*dE/2*np.pi
@@ -862,7 +852,6 @@ def calc_production(Sigma_l, Gr, Sigma_r, Gles, basis, gd0, e_grid):
 def orbital(phi_xG, index):
     return phi_xG.take(index, axis=0)
 
-
 def orb_grad2(phi_xG, i_orb, j_orb, dx, dy, dz):
     psi = orbital(phi_xG, i_orb)
     x, y, z = gradientO4(orbital(phi_xG, j_orb), dx, dy, dz)
@@ -898,7 +887,6 @@ def gradientO4(f, *varargs):
 
     # use central differences on interior and first differences on endpoints
 
-    # print dx
     outvals = []
 
     # create slice objects --- initially all are [:, :, ..., :]
@@ -908,9 +896,9 @@ def gradientO4(f, *varargs):
     slice3 = [slice(None)]*N
     slice4 = [slice(None)]*N
 
-    otype = f.dtype.char
-    if otype not in ['f', 'd', 'F', 'D']:
-        otype = 'd'
+    # otype = f.dtype.char
+    # if otype not in ['f', 'd', 'F', 'D']:
+    #     otype = 'd'
 
     for axis in range(N):
         # select out appropriate parts for this dimension
@@ -921,20 +909,25 @@ def gradientO4(f, *varargs):
         slice2[axis] = slice(1, -3)
         slice3[axis] = slice(3, -1)
         slice4[axis] = slice(4, None)
+
         # 1D equivalent -- out[2:-2] = (f[:4] - 8*f[1:-3] + 8*f[3:-1] - f[4:])/12.0
-        out[slice0] = (f[slice1] - 8.0*f[slice2] + 8.0*f[slice3] - f[slice4])/12.0
+        out[tuple(slice0)] = (f[tuple(slice1)]
+                       - 8.0*f[tuple(slice2)]
+                       + 8.0*f[tuple(slice3)]
+                       - f[tuple(slice4)]
+                       /12.0)
 
         slice0[axis] = slice(None, 2)
         slice1[axis] = slice(1, 3)
         slice2[axis] = slice(None, 2)
         # 1D equivalent -- out[0:2] = (f[1:3] - f[0:2])
-        out[slice0] = (f[slice1] - f[slice2])
+        out[tuple(slice0)] = (f[tuple(slice1)] - f[tuple(slice2)])
 
         slice0[axis] = slice(-2, None)
         slice1[axis] = slice(-2, None)
         slice2[axis] = slice(-3, -1)
         # 1D equivalent -- out[-2:] = (f[-2:] - f[-3:-1])
-        out[slice0] = (f[slice1] - f[slice2])
+        out[tuple(slice0)] = (f[tuple(slice1)] - f[tuple(slice2)])
 
         # divide by step size
         outvals.append(out / dx[axis])
@@ -972,8 +965,6 @@ def Jc_current(Gles, path, data_basename, fname):
     dz = z_cor[1] - z_cor[0]
 
     bf_list = np.arange(0, n, 1)
-    # bf_list =  np.arange(6,10,1) # np.arange(37,41,1)
-    # print bf_list, "bf_list"
 
     for k, i in enumerate(tqdm(bf_list, desc="Outer loop current")):
         for l, j in enumerate(bf_list):

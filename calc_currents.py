@@ -12,7 +12,7 @@
 
 from utils_zcolor import *
 from numpy import ascontiguousarray as asc
-from gpaw.lcao.tools import dump_hamiltonian_parallel, get_bfi2
+from gpaw.lcao.tools import dump_hamiltonian_parallel,get_bfi2
 from gpaw.lcao.tools import get_lcao_hamiltonian, get_lead_lcao_hamiltonian
 from gpaw import GPAW, FermiDirac
 from ase.io.trajectory import Trajectory
@@ -28,6 +28,7 @@ from gpaw import setup_paths
 import pickle as pickle
 import matplotlib
 matplotlib.use('agg')
+import time
 
 #from my_poisson_solver import solve_directly, minus_gradient, solve_with_multigrid
 
@@ -50,7 +51,6 @@ args = parser.parse_args()
 path = os.path.abspath(args.path) + "/"
 ef = float(args.ef)
 basis = args.basis
-path = os.path.abspath(args.path) + "/"
 xyzname = args.xyzname
 
 # Constants
@@ -60,6 +60,7 @@ kpts = (1, 1, 1)
 mode = 'lcao'
 h = 0.20
 vacuum = 4
+# kpt = monkhorst_pack((1, 1, 1))
 
 eV2au = 1/Hartree
 
@@ -84,8 +85,33 @@ basis_full = {'H': 'sz',
               'P': basis,
               'Ru': basis}
 
-# grid_size is the divider for h
+# Divider for h - size of the arrows for current density
 grid_size = 3
+
+basename = "__basis_{0}__h_{1}__cutoff_{2}__xc_{3}__gridsize_{4:.2f}__bias_{5}__ef_{6}__gamma_{7}__energy_grid_{8}_{9}_{10}__multi_grid__type__".format(
+    basis,
+    h,
+    co,
+    xc,
+    grid_size,
+    bias / eV2au,
+    ef / eV2au,
+    gamma / eV2au,
+    estart / eV2au,
+    eend / eV2au,
+    es / eV2au)
+
+fname = "basis_{0}__xc_{1}__h_{2}__fdwithd_{3}__kpts_{4}__mode_{5}__vacuum_{6}__".format(
+    basis,
+    xc,
+    h,
+    FDwidth,
+    kpts,
+    mode,
+    vacuum)
+
+plot_basename = "plots/" + basename
+data_basename = "data/" + basename
 
 molecule = read(path + xyzname)
 
@@ -93,13 +119,9 @@ molecule = read(path + xyzname)
 align1 = 2
 align2 = 4
 
-"""
-Identify end atoms and align according to z-direction
-"""
+# Identify end atoms and align according to z-direction
 atoms = identify_and_align(molecule, align1, align2)
-
 symbols = atoms.get_chemical_symbols()
-
 np.save(path + "positions.npy", atoms.get_positions())
 np.save(path + "symbols.npy", symbols)
 atoms.write(path + "central_region.xyz")
@@ -117,18 +139,7 @@ calc = GPAW(h=h,
 
 atoms.set_calculator(calc)
 atoms.get_potential_energy()  # Converge everything!
-Ef = atoms.calc.get_fermi_level()
-print('fermi is', Ef)
-
-kpt = monkhorst_pack((1, 1, 1))
-
-fname = "basis_{0}__xc_{1}__h_{2}__fdwithd_{3}__kpts_{4}__mode_{5}__vacuum_{6}__".format(
-    basis, xc, h, FDwidth, kpts, mode, vacuum)
-basename = "__basis_{0}__h_{1}__cutoff_{2}__xc_{3}__gridsize_{4:.2f}__bias_{5}__ef_{6}__gamma_{7}__energy_grid_{8}_{9}_{10}__multi_grid__type__".format(
-    basis, h, co, xc, grid_size, bias / eV2au, ef / eV2au, gamma / eV2au, estart / eV2au, eend / eV2au, es / eV2au)
-
-plot_basename = "plots/" + basename
-data_basename = "data/" + basename
+print('fermi is', atoms.calc.get_fermi_level())
 
 dump_hamiltonian_parallel(path + 'scat_' + fname, atoms, direction='z')
 
@@ -144,15 +155,15 @@ np.save(path + fname + "ao_basis_grid", [phi_xg, gd0])
 plot_basis(atoms, phi_xg, ns=len(bfs), folder_name=path + "basis/ao")
 
 # Calculate the transmission AJ style - AO basis
+print("Calculating transmission")
+
 H_ao, S_ao = pickle.load(open(path + 'scat_' + fname + '0.pckl', 'rb'))
 H_ao = H_ao[0, 0] * eV2au
 S_ao = S_ao[0]
 n = len(H_ao)
 
-print("Calculating transmission")
 GamL = np.zeros([n, n])
 GamR = np.zeros([n, n])
-
 GamL[0, 0] = gamma
 GamR[n - 1, n - 1] = gamma
 
@@ -160,15 +171,12 @@ energy_grid = np.arange(estart, eend, es)
 
 Gamma_L = [GamL for en in range(len(energy_grid))]
 Gamma_R = [GamR for en in range(len(energy_grid))]
-
 Gamma_L = np.swapaxes(Gamma_L, 0, 2)
 Gamma_R = np.swapaxes(Gamma_R, 0, 2)
 
 Gr = ret_gf_ongrid(energy_grid, H_ao, S_ao, Gamma_L, Gamma_R)
-
 trans = calc_trans(energy_grid, Gr, Gamma_L, Gamma_R)
-
-plot_transmission(energy_grid*Hartree, trans, path + plot_basename + "trans.png")
+plot_transmission(energy_grid*Hartree, np.real(trans), path + plot_basename + "trans.png")
 np.save(path + data_basename + 'trans_full.npy', [energy_grid*Hartree, trans])
 
 print("Transmission done")
@@ -200,13 +208,12 @@ GamR_mo = np.dot(np.dot(eig_vec.T, GamR), eig_vec)
 
 Gamma_L_mo = [GamL_mo for en in range(len(energy_grid))]
 Gamma_R_mo = [GamR_mo for en in range(len(energy_grid))]
-
 Gamma_L_mo = np.swapaxes(Gamma_L_mo, 0, 2)
 Gamma_R_mo = np.swapaxes(Gamma_R_mo, 0, 2)
 
 Gr_mo = ret_gf_ongrid(energy_grid, H_mo, S_mo, Gamma_L_mo, Gamma_R_mo)
 trans_mo = calc_trans(energy_grid, Gr_mo, Gamma_L_mo, Gamma_R_mo)
-plot_transmission(energy_grid, trans_mo, path + plot_basename + "trans_mo.png")
+plot_transmission(energy_grid, np.real(trans_mo), path + plot_basename + "trans_mo.png")
 np.save(path + data_basename + 'trans_full_mo.npy', [energy_grid, trans_mo])
 
 np.savetxt(path + 'eig_spectrum.txt', X=eig_vals*Hartree, fmt='%.10s', newline='\n')
@@ -217,7 +224,7 @@ for n in range(len(eig_vals)):
         LUMO = eig_vals[n + 1]
         midgap = (HOMO + LUMO)/2.0
 
-        np.savetxt(path + "basis/mo/"+'homo_index.txt', X=['HOMO index is ', n], fmt='%.10s', newline='\n')
+        np.savetxt(path + "basis/mo/" + 'homo_index.txt', X=['HOMO index is ', n], fmt='%.10s', newline='\n')
         break
 
 hl_gap = ['HOMO is ', HOMO*Hartree, 'LUMO is ', LUMO*Hartree, 'mid-gap is ', midgap*Hartree]
@@ -227,8 +234,9 @@ np.savetxt(path + 'HOMO_LUMO.txt', X=hl_gap, fmt='%.10s', newline='\n')
 """Current with fermi functions"""
 fR, fL = fermi_ongrid(energy_grid, ef, bias)
 dE = energy_grid[1] - energy_grid[0]
-current_trans = (1/(2*np.pi))*np.array([trans[en].real * (fL[en]-fR[en])*dE for en in range(len(energy_grid))]).sum()
+current_trans = (1 / (2*np.pi)) * np.array([trans[en].real * (fL[en]-fR[en])*dE for en in range(len(energy_grid))]).sum()
 np.save(path + data_basename + "current_trans.npy", current_trans)
+
 
 """Current approx at low temp"""
 Sigma_r = -1j/2. * (GamL + GamR)  # + V_pot
