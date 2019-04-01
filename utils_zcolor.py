@@ -15,7 +15,8 @@ from ase.io import write as ase
 from gpaw import GPAW, FermiDirac
 from gpaw import setup_paths
 from gpaw.lcao.tools import get_lcao_hamiltonian, get_lead_lcao_hamiltonian
-from gpaw.lcao.tools import dump_hamiltonian_parallel, get_bfi
+from gpaw.lcao.tools import dump_hamiltonian_parallel, get_bfi2
+
 
 import pickle
 from tqdm import tqdm
@@ -1195,7 +1196,6 @@ def create_colorlist(colors):
     cmap_name = 'my_list'
     cm = LinearSegmentedColormap.from_list(cmap_name, colors, N=n_bins[0])
     colorlist = []
-
     for n in np.arange(n_bins[0]):
         colorlist.append(list(cm(n))[:-1])
 

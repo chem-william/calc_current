@@ -71,7 +71,6 @@ ef = ef * eV2au # If ef has been set to a custom value.
 estart, eend = [-6 * eV2au, 6 * eV2au]
 es = 1e-2 * eV2au
 correction = False
-energy_grid = np.arange(estart, eend, es)
 
 basis_full = {'H': 'sz',
               'C': basis,
@@ -144,8 +143,9 @@ print('fermi is', atoms.calc.get_fermi_level())
 
 dump_hamiltonian_parallel(path + 'scat_' + fname, atoms, direction='z')
 
-# Write AO basis to disk
-bfs = get_bfi2(symbols, basis, range(len(atoms)))
+# Saves the AO basis as .cube files.
+a_list = range(0, len(atoms))
+bfs = get_bfi2(symbols, basis_full, range(len(a_list)))
 rot_mat = np.diag(v=np.ones(len(bfs)))
 c_fo_xi = asc(rot_mat.real.T)  # coefficients
 phi_xg = calc.wfs.basis_functions.gd.zeros(len(c_fo_xi))
@@ -166,6 +166,8 @@ GamL = np.zeros([n, n])
 GamR = np.zeros([n, n])
 GamL[0, 0] = gamma
 GamR[n - 1, n - 1] = gamma
+
+energy_grid = np.arange(estart, eend, es)
 
 Gamma_L = [GamL for en in range(len(energy_grid))]
 Gamma_R = [GamR for en in range(len(energy_grid))]
@@ -189,6 +191,7 @@ S_mo = np.dot(np.dot(eig_vec.T.conj(), S_ao), eig_vec)
 H_mo = np.dot(np.dot(eig_vec.T, H_ao), eig_vec)
 eig_vec = eig_vec / np.sqrt(np.diag(S_mo))
 
+# Apparently the 'asc'-function does something - do not remove or it'll break the MO's
 # Save the MO basis as .cube files
 c_fo_xi = asc(eig_vec.real.T)  # coefficients
 mo_phi_xg = calc.wfs.basis_functions.gd.zeros(len(c_fo_xi))
