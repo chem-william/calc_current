@@ -25,6 +25,8 @@ from ase.units import Hartree
 import numpy as np
 import matplotlib
 import utils_zcolor
+
+import time
 matplotlib.use('agg')
 
 parser = argparse.ArgumentParser(description='Process some integers.')
@@ -253,7 +255,12 @@ np.save(path + data_basename + "trans_mo_dV.npy", [ef, Tt_mo.trace()])
 np.save(path + data_basename + "current_dV.npy", current_dV)
 
 """Non corrected current"""
+print('info about Gles')
+print(Gles)
+print(len(Gles))
+print(Gles.shape)
 current_c, jx_c, jy_c, jz_c, x_cor, y_cor, z_cor, gd0 = utils_zcolor.Jc_current(Gles, path, data_basename, fname)
+
 np.save(path + data_basename + "current_c_all.npy", np.array([jx_c, jy_c, jz_c, x_cor, y_cor, z_cor]))
 np.save(path + data_basename + "current_c.npy", np.array([current_c, x_cor, y_cor, z_cor]))
 

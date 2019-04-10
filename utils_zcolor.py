@@ -148,12 +148,12 @@ def fermi_ongrid(energy_grid, e_f, bias):
 
     return f_left, f_right
 
-def orbital(phi_xG, index):
-    return phi_xG.take(index, axis=0)
+# def orbital(phi_xG, index):
+#     return phi_xG.take(index, axis=0)
 
-def orb_grad2(phi_xG, i_orb, j_orb, dx, dy, dz):
-    psi = orbital(phi_xG, i_orb)
-    x, y, z = gradientO4(orbital(phi_xG, j_orb), dx, dy, dz)
+def orb_grad2(phi_xG, orb_i, orb_j, dx, dy, dz):
+    psi = phi_xG[orb_i]
+    x, y, z = gradientO4(phi_xG[orb_j], dx, dy, dz)
 
     return psi*x, psi*y, psi*z
 
@@ -194,10 +194,6 @@ def gradientO4(f, *varargs):
     slice3 = [slice(None)]*N
     slice4 = [slice(None)]*N
 
-    # otype = f.dtype.char
-    # if otype not in ['f', 'd', 'F', 'D']:
-    #     otype = 'd'
-
     for axis in range(N):
         # select out appropriate parts for this dimension
         out = np.zeros(f.shape, f.dtype.char)
@@ -218,12 +214,14 @@ def gradientO4(f, *varargs):
         slice0[axis] = slice(None, 2)
         slice1[axis] = slice(1, 3)
         slice2[axis] = slice(None, 2)
+
         # 1D equivalent -- out[0:2] = (f[1:3] - f[0:2])
         out[tuple(slice0)] = (f[tuple(slice1)] - f[tuple(slice2)])
 
         slice0[axis] = slice(-2, None)
         slice1[axis] = slice(-2, None)
         slice2[axis] = slice(-3, -1)
+
         # 1D equivalent -- out[-2:] = (f[-2:] - f[-3:-1])
         out[tuple(slice0)] = (f[tuple(slice1)] - f[tuple(slice2)])
 
@@ -263,13 +261,13 @@ def Jc_current(Gles, path, data_basename, fname):
 
     bf_list = np.arange(0, n, 1)
 
-    for k, i in enumerate(tqdm(bf_list, desc="Outer loop current")):
-        for l, j in enumerate(bf_list):
-            x1, y1, z1 = orb_grad2(phi_xg, i, j, dx, dy, dz)
+    for index_1, orb_i in enumerate(tqdm(bf_list, desc="Outer loop current")):
+        for index_2, orb_j in enumerate(bf_list):
+            x1, y1, z1 = orb_grad2(phi_xg, orb_i, orb_j, dx, dy, dz)
 
-            jx += 2*Mlt[k, l].real*x1
-            jy += 2*Mlt[k, l].real*y1
-            jz += 2*Mlt[k, l].real*z1
+            jx += 2*Mlt[index_1, index_2].real*x1
+            jy += 2*Mlt[index_1, index_2].real*y1
+            jz += 2*Mlt[index_1, index_2].real*z1
 
     dA = (x_cor[1] - x_cor[0])*(y_cor[1] - y_cor[0])
     current = jz.sum(axis=(0, 1))*dA
