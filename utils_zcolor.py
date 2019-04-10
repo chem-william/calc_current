@@ -13,7 +13,6 @@ from gpaw import GPAW
 from gpaw import FermiDirac
 from gpaw.lcao.tools import dump_hamiltonian_parallel
 from gpaw.lcao.tools import get_bfi
-
 import pickle
 from tqdm import tqdm
 
@@ -281,7 +280,6 @@ def create_colorlist(colors):
     cmap_name = 'my_list'
     cm = LinearSegmentedColormap.from_list(cmap_name, colors, N=n_bins[0])
     colorlist = []
-
     for n in np.arange(n_bins[0]):
         colorlist.append(list(cm(n))[:-1])
 
