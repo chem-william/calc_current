@@ -272,7 +272,6 @@ def create_colorlist(colors):
     cmap_name = 'my_list'
     cm = LinearSegmentedColormap.from_list(cmap_name, colors, N=n_bins[0])
     colorlist = []
-
     for n in np.arange(n_bins[0]):
         colorlist.append(list(cm(n))[:-1])
 
