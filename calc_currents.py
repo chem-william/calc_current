@@ -13,6 +13,7 @@
 import argparse
 import os
 import pickle
+import multiprocessing as mp
 from numpy import ascontiguousarray as asc
 from gpaw import GPAW
 from gpaw import FermiDirac
@@ -145,13 +146,17 @@ rot_mat = np.diag(v=np.ones(len(bfs)))
 c_fo_xi = asc(rot_mat.real.T)  # coefficients
 phi_xg = calc.wfs.basis_functions.gd.zeros(len(c_fo_xi))
 gd0 = calc.wfs.gd
+# gd0_coords = [gd0.coords(0), gd0.coords(1), gd0.coords(2)]
+# gd0_zeros = gd0.zeros(1)[0]
+
 calc.wfs.basis_functions.lcao_to_grid(c_fo_xi, phi_xg, -1)
 np.save(path + fname + "ao_basis_grid", [phi_xg, gd0])
 utils_zcolor.plot_basis(atoms, phi_xg, ns=len(bfs), folder_name=path + "basis/ao")
 
 # Calculate the transmission AJ style - AO basis
-print("Calculating transmission")
+print("Calculating transmission - AO-basis")
 
+#TODO: change pickle to np + delete pickle import
 H_ao, S_ao = pickle.load(open(path + 'scat_' + fname + '0.pckl', 'rb'))
 H_ao = H_ao[0, 0] * eV2au
 S_ao = S_ao[0]
@@ -170,9 +175,10 @@ Gamma_R = np.swapaxes(Gamma_R, 0, 2)
 Gr = utils_zcolor.ret_gf_ongrid(energy_grid, H_ao, S_ao, Gamma_L, Gamma_R)
 trans = utils_zcolor.calc_trans(energy_grid, Gr, Gamma_L, Gamma_R)
 utils_zcolor.plot_transmission(energy_grid*Hartree, np.real(trans), path + plot_basename + "trans.png")
+
 np.save(path + data_basename + 'trans_full.npy', [energy_grid*Hartree, trans])
 
-print("Transmission done")
+print("AO-transmission done!")
 
 # Calculate transmission with MO basis
 # Convert AO's to MO's
@@ -187,13 +193,13 @@ eig_vec = eig_vec / np.sqrt(np.diag(S_mo))
 # Save the MO basis as .cube files
 c_fo_xi = asc(eig_vec.real.T)  # coefficients
 mo_phi_xg = calc.wfs.basis_functions.gd.zeros(len(c_fo_xi))
-gd0 = calc.wfs.gd
+gd0 = calc.wfs.gd #TODO: remove this line?
 calc.wfs.basis_functions.lcao_to_grid(c_fo_xi, mo_phi_xg, -1)
 np.save(path + fname + "mo_energies", eig_vals)
 np.save(path + fname + "mo_basis", mo_phi_xg)
 utils_zcolor.plot_basis(atoms, mo_phi_xg, ns=len(bfs), folder_name=path + "basis/mo")
 
-print("ready to run transmission")
+print("Calculating transmission - MO-basis")
 
 GamL_mo = np.dot(np.dot(eig_vec.T, GamL), eig_vec)
 GamR_mo = np.dot(np.dot(eig_vec.T, GamR), eig_vec)
@@ -207,6 +213,8 @@ Gr_mo = utils_zcolor.ret_gf_ongrid(energy_grid, H_mo, S_mo, Gamma_L_mo, Gamma_R_
 trans_mo = utils_zcolor.calc_trans(energy_grid, Gr_mo, Gamma_L_mo, Gamma_R_mo)
 utils_zcolor.plot_transmission(energy_grid, np.real(trans_mo), path + plot_basename + "trans_mo.png")
 np.save(path + data_basename + 'trans_full_mo.npy', [energy_grid, trans_mo])
+
+print('MO-transmission done!')
 
 np.savetxt(path + 'eig_spectrum.txt', X=eig_vals*Hartree, fmt='%.10s', newline='\n')
 # find HOMO and LUMO
@@ -255,11 +263,13 @@ np.save(path + data_basename + "trans_mo_dV.npy", [ef, Tt_mo.trace()])
 np.save(path + data_basename + "current_dV.npy", current_dV)
 
 """Non corrected current"""
-print('info about Gles')
-print(Gles)
-print(len(Gles))
-print(Gles.shape)
-current_c, jx_c, jy_c, jz_c, x_cor, y_cor, z_cor, gd0 = utils_zcolor.Jc_current(Gles, path, data_basename, fname)
+phi_xg, gd0 = np.load(path + fname + "ao_basis_grid.npy")
+current_c, jx_c, jy_c, jz_c, x_cor, y_cor, z_cor = utils_zcolor.Jc_current(Gles,
+																		   phi_xg,
+																		   gd0,
+																		   path,
+																		   data_basename, 
+																		   fname)
 
 np.save(path + data_basename + "current_c_all.npy", np.array([jx_c, jy_c, jz_c, x_cor, y_cor, z_cor]))
 np.save(path + data_basename + "current_c.npy", np.array([current_c, x_cor, y_cor, z_cor]))

@@ -1,8 +1,8 @@
 import numpy as np
+import pickle
 from numpy import ascontiguousarray as asc
 
 import matplotlib.pyplot as plt
-# from matplotlib import cm
 from matplotlib.colors import LinearSegmentedColormap
 
 from ase import Atoms
@@ -13,9 +13,7 @@ from gpaw import GPAW
 from gpaw import FermiDirac
 from gpaw.lcao.tools import dump_hamiltonian_parallel
 from gpaw.lcao.tools import get_bfi
-
-import pickle
-from tqdm import tqdm
+import multiprocessing as mp
 
 
 def plot_basis(atoms, phi_xG, ns, folder_name='./basis'):
@@ -148,9 +146,6 @@ def fermi_ongrid(energy_grid, e_f, bias):
 
     return f_left, f_right
 
-# def orbital(phi_xG, index):
-#     return phi_xG.take(index, axis=0)
-
 def orb_grad2(phi_xG, orb_i, orb_j, dx, dy, dz):
     psi = phi_xG[orb_i]
     x, y, z = gradientO4(phi_xG[orb_j], dx, dy, dz)
@@ -241,11 +236,10 @@ def gradientO4(f, *varargs):
     else:
         return outvals
 
-def Jc_current(Gles, path, data_basename, fname):
+def Jc_current(Gles, phi_xg, gd0, path, data_basename, fname):
     Mlt = 1j*Gles/(4*np.pi)
     n = len(Mlt)
     np.save(path + data_basename + "Gles_dV.npy", Mlt)
-    phi_xg, gd0 = np.load(path + fname + "ao_basis_grid.npy")
 
     jx = gd0.zeros(1)[0]
     jy = gd0.zeros(1)[0]
@@ -260,8 +254,7 @@ def Jc_current(Gles, path, data_basename, fname):
     dz = z_cor[1] - z_cor[0]
 
     bf_list = np.arange(0, n, 1)
-
-    for index_1, orb_i in enumerate(tqdm(bf_list, desc="Outer loop current")):
+    for index_1, orb_i in enumerate(bf_list):
         for index_2, orb_j in enumerate(bf_list):
             x1, y1, z1 = orb_grad2(phi_xg, orb_i, orb_j, dx, dy, dz)
 
@@ -271,8 +264,8 @@ def Jc_current(Gles, path, data_basename, fname):
 
     dA = (x_cor[1] - x_cor[0])*(y_cor[1] - y_cor[0])
     current = jz.sum(axis=(0, 1))*dA
-
-    return current, jx, jy, jz, x_cor, y_cor, z_cor, gd0
+    
+    return current, jx, jy, jz, x_cor, y_cor, z_cor
 
 def create_colorlist(colors):
     n_bins = [201]  # Discretizes the interpolation into bins
@@ -333,7 +326,7 @@ def plot_current(jx, jy, jz, x, y, z, savename, s, amp, co, path, align1, align2
                     rel_z = jz[ix, iy, iz]/norm2
                     z_color = z_colorlist[int(np.round(rel_z, decimals=2)*100) + 100]
 
-                    rel_phi = (jy[ix, iy, iz]*np.cos(np.arctan2(y2 - refcoord1[1], x2 - refcoord1[0])) - jx[ix, iy, iz]*np.sin(np.arctan2(y2 - refcoord1[1], x2-refcoord1[0])))/norm2
+                    rel_phi = (jy[ix, iy, iz]*np.cos(np.arctan2(y2 - refcoord1[1], x2 - refcoord1[0])) - jx[ix, iy, iz]*np.sin(np.arctan2(y2 - refcoord1[1], x2 - refcoord1[0])))/norm2
                     cyl_color = cyl_colorlist[int(np.round(rel_phi, decimals=2)*100) + 100]
 
                     z_list.append("draw arrow{0} arrow color {8} diameter {7} {{ {1},{2},{3} }} {{ {4},{5},{6} }} \n".
