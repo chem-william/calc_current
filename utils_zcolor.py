@@ -15,7 +15,6 @@ from gpaw.lcao.tools import dump_hamiltonian_parallel
 from gpaw.lcao.tools import get_bfi
 import multiprocessing as mp
 
-
 def plot_basis(atoms, phi_xG, ns, folder_name='./basis'):
     """
     r: coefficients of atom-centered basis functions
@@ -146,10 +145,12 @@ def fermi_ongrid(energy_grid, e_f, bias):
 
     return f_left, f_right
 
-def orb_grad2(phi_xG, orb_i, orb_j, dx, dy, dz):
-    psi = phi_xG[orb_i]
-    x, y, z = gradientO4(phi_xG[orb_j], dx, dy, dz)
+def orbital(phi_xG, index):
+    return phi_xG.take(index, axis=0)
 
+def orb_grad2(phi_xG, i_orb, j_orb, dx, dy, dz):
+    psi = orbital(phi_xG, i_orb)
+    x, y, z = gradientO4(orbital(phi_xG, j_orb), dx, dy, dz)
     return psi*x, psi*y, psi*z
 
 def gradientO4(f, *varargs):
@@ -236,6 +237,8 @@ def gradientO4(f, *varargs):
     else:
         return outvals
 
+
+
 def Jc_current(Gles, phi_xg, gd0, path, data_basename, fname):
     Mlt = 1j*Gles/(4*np.pi)
     n = len(Mlt)
@@ -254,13 +257,14 @@ def Jc_current(Gles, phi_xg, gd0, path, data_basename, fname):
     dz = z_cor[1] - z_cor[0]
 
     bf_list = np.arange(0, n, 1)
-    for index_1, orb_i in enumerate(bf_list):
-        for index_2, orb_j in enumerate(bf_list):
-            x1, y1, z1 = orb_grad2(phi_xg, orb_i, orb_j, dx, dy, dz)
 
-            jx += 2*Mlt[index_1, index_2].real*x1
-            jy += 2*Mlt[index_1, index_2].real*y1
-            jz += 2*Mlt[index_1, index_2].real*z1
+    for k, i in enumerate(bf_list):
+        for l, j in enumerate(bf_list):
+            x1, y1, z1 = orb_grad2(phi_xg, i, j, dx, dy, dz)
+
+            jx += 2*Mlt[k, l].real*x1
+            jy += 2*Mlt[k, l].real*y1
+            jz += 2*Mlt[k, l].real*z1
 
     dA = (x_cor[1] - x_cor[0])*(y_cor[1] - y_cor[0])
     current = jz.sum(axis=(0, 1))*dA
@@ -272,6 +276,7 @@ def create_colorlist(colors):
     cmap_name = 'my_list'
     cm = LinearSegmentedColormap.from_list(cmap_name, colors, N=n_bins[0])
     colorlist = []
+
     for n in np.arange(n_bins[0]):
         colorlist.append(list(cm(n))[:-1])
 
