@@ -1,0 +1,64 @@
+#!/bin/bash
+if [ $# -ne 4 ]; then
+    echo " This script has to be called in the following form:"
+    echo ""
+    echo "                    submit_g16 queue cores mem input"
+    echo ""
+    exit
+fi
+
+QUEUE=$1
+CORES=$2
+MEM=$3
+IN=$4
+
+# get the filename without the extension
+JOB=${IN%.*}
+
+SUBMIT=qsub.tmp
+PWD=`pwd`
+
+# Checks if there is already data present so it doesn't overwrite
+if [ -f $PWD/data/central_region.xyz ]
+then
+    read -p "Seems like there's already some data. Do you want to delete everything and re-run the script? y/n" -n 1 -r
+    echo
+    echo
+
+    if [[ $REPLY =~ ^[Yy]$ ]]
+    then
+        rm -rfv data/ __pycache__/ logfile.txt seq.*.err seq.*.out
+        mkdir data
+        mkdir data/basis
+        mkdir data/basis/ao
+        mkdir data/basis/mo
+        mkdir data/basis/lowdin
+        mkdir data/basis/eigchan
+        mkdir data/plots
+        mkdir data/data
+        cp hh_junc.traj data/.
+    else
+        exit
+    fi
+fi
+
+#SBATCH --mail-type=END,FAIL
+#SBATCH --mail-user=bkhiohio@gmail.com
+
+cat > $SUBMIT <<!EOF
+#!/bin/bash
+#SBATCH --job-name=$JOB
+#SBATCH --error=`pwd`/seq.%j.err
+#SBATCH --output=`pwd`/seq.%j.out
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=$CORES
+#SBATCH --mem=$MEM"gb"
+#SBATCH --partition=$QUEUE
+
+srun gpaw-python ~/bin/py_scripts/calc_currents.py --path $PWD/data
+
+!EOF
+
+sbatch $SUBMIT
+rm $SUBMIT
