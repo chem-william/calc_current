@@ -15,11 +15,10 @@ from gpaw.lcao.tools import dump_hamiltonian_parallel
 from gpaw.lcao.tools import get_bfi
 import multiprocessing as mp
 
-def plot_basis(atoms, phi_xG, ns, folder_name='./basis'):
+def plot_basis(atoms, phi_xG, folder_name='./basis'):
     """
     r: coefficients of atom-centered basis functions
     atoms: Atoms-object
-    ns: indices of bfs functions to plot.
     """
     for n, phi in enumerate(phi_xG):
         write('%s/%d.cube' % (folder_name, n), atoms, data=phi)
@@ -82,7 +81,7 @@ def calc_trans(energy_grid, gret, gamma_left, gamma_right):
     Presumably because the matrices are pretty much the same and the overhead
     from calculating efficiency outweighs doing the calculation.
     """
-    trans = np.array([np.dot(np.dot(np.dot(gamma_left[:, :, en], gret[:, :, en]), gamma_right[:, :, en]), gret[:, :, en].T.conj()).trace() for en in range(len(energy_grid))])
+    trans = np.array([np.matmul(np.matmul(np.matmul(gamma_left[:, :, en], gret[:, :, en]), gamma_right[:, :, en]), gret[:, :, en].T.conj()).trace() for en in range(len(energy_grid))])
 
     return trans
 
@@ -145,12 +144,9 @@ def fermi_ongrid(energy_grid, e_f, bias):
 
     return f_left, f_right
 
-def orbital(phi_xG, index):
-    return phi_xG.take(index, axis=0)
-
 def orb_grad2(phi_xG, i_orb, j_orb, dx, dy, dz):
-    psi = orbital(phi_xG, i_orb)
-    x, y, z = gradientO4(orbital(phi_xG, j_orb), dx, dy, dz)
+    psi = phi_xG[i_orb]
+    x, y, z = gradientO4(phi_xG[j_orb], dx, dy, dz)
     return psi*x, psi*y, psi*z
 
 def gradientO4(f, *varargs):
