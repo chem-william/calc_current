@@ -1,8 +1,12 @@
 import multiprocessing as mp
 
 import numpy as np
-from matplotlib.colors import LinearSegmentedColormap
+from ase import Atoms
 from ase.io import write
+from ase.io import read
+from matplotlib.colors import LinearSegmentedColormap
+import matplotlib.pyplot as plt
+
 
 def plot_basis(atoms, phi_xG, folder_name='./basis'):
     """
