@@ -1,19 +1,8 @@
-import numpy as np
-import pickle
-from numpy import ascontiguousarray as asc
-
-import matplotlib.pyplot as plt
-from matplotlib.colors import LinearSegmentedColormap
-
-from ase import Atoms
-from ase.io import read
-from ase.io import write
-from ase.dft.kpoints import monkhorst_pack
-from gpaw import GPAW
-from gpaw import FermiDirac
-from gpaw.lcao.tools import dump_hamiltonian_parallel
-from gpaw.lcao.tools import get_bfi
 import multiprocessing as mp
+
+import numpy as np
+from matplotlib.colors import LinearSegmentedColormap
+from ase.io import write
 
 def plot_basis(atoms, phi_xG, folder_name='./basis'):
     """
