@@ -20,7 +20,6 @@ from pathlib import Path
 home = str(Path.home())
 sys.path.append(home + '/bin/py_scripts/')
 import pickle
-import multiprocessing as mp
 
 from numpy import ascontiguousarray as asc
 from gpaw import GPAW
@@ -37,6 +36,12 @@ matplotlib.use('agg')
 
 import utils_zcolor
 
+
+def read_config(config_file):
+	with open(config_file) as file:
+		lines = file.readlines()
+	return int(lines[0].strip()), int(lines[1].strip())
+
 def main():	
 	parser = argparse.ArgumentParser(description='Process some integers.')
 	parser.add_argument('--path',
@@ -51,11 +56,16 @@ def main():
 	parser.add_argument('--ef',
 	                    default=0.,
 	                    help='fermi')
+	parser.add_argument('--config',
+			    		default=None,
+			    		help='name of the config file where start and end indices are')
 	args = parser.parse_args()
 	path = os.path.abspath(args.path) + "/"
 	ef = float(args.ef)
 	basis = args.basis
 	xyzname = args.xyzname
+	config = args.config
+
 
 	# Constants
 	xc = 'PBE'
@@ -119,8 +129,9 @@ def main():
 	molecule = read(path + xyzname)
 
 	# Align z-axis and cutoff at these atoms, OBS paa retningen.
-	align1 = 2
-	align2 = 4
+	if config == None:
+		raise ValueError('No config file has been chosen')
+	align1, align2 = read_config(config)
 
 	# Identify end atoms and align according to z-direction
 	atoms = utils_zcolor.identify_and_align(molecule, align1, align2)
@@ -154,11 +165,11 @@ def main():
 	gd0 = calc.wfs.gd
 
 	calc.wfs.basis_functions.lcao_to_grid(c_fo_xi, phi_xg, -1)
-	# Writing this disk will result in a error
+	# Writing this to disk will result in a error
 	# Reason: Numpy tries to pickle the objects, but gd0 is 
 	# not pickleable as it's a MPI object
 	# np.save(path + fname + "ao_basis_grid", [phi_xg, gd0])
-	utils_zcolor.plot_basis(atoms, phi_xg, ns=len(bfs), folder_name=path + "basis/ao")
+	utils_zcolor.plot_basis(atoms, phi_xg, folder_name=path + "basis/ao")
 
 	# Calculate the transmission AJ style - AO basis
 	print("Calculating transmission - AO-basis")
@@ -180,6 +191,12 @@ def main():
 	Gamma_R = np.swapaxes(Gamma_R, 0, 2)
 
 	Gr = utils_zcolor.ret_gf_ongrid(energy_grid, H_ao, S_ao, Gamma_L, Gamma_R)
+	
+	# To optimize the following matrix operations
+	Gamma_L = Gamma_L.astype(dtype='float32', order='F')
+	Gamma_R = Gamma_R.astype(dtype='float32', order='F')
+	
+	Gr = Gr.astype(dtype='complex64', order='F')
 	trans = utils_zcolor.calc_trans(energy_grid, Gr, Gamma_L, Gamma_R)
 	utils_zcolor.plot_transmission(energy_grid*Hartree, np.real(trans), path + plot_basename + "trans.png")
 
@@ -200,29 +217,29 @@ def main():
 	# Save the MO basis as .cube files
 	c_fo_xi = asc(eig_vec.real.T)  # coefficients
 	mo_phi_xg = calc.wfs.basis_functions.gd.zeros(len(c_fo_xi))
-	#gd0 = calc.wfs.gd #TODO: remove this line?
 	calc.wfs.basis_functions.lcao_to_grid(c_fo_xi, mo_phi_xg, -1)
 	np.save(path + fname + "mo_energies", eig_vals)
 	np.save(path + fname + "mo_basis", mo_phi_xg)
-	utils_zcolor.plot_basis(atoms, mo_phi_xg, ns=len(bfs), folder_name=path + "basis/mo")
+	utils_zcolor.plot_basis(atoms, mo_phi_xg, folder_name=path + "basis/mo")
+	# Uncomment to calculate the transmission
+	# in MO-basis. If not the same as AO-basis,
+	# something is wrong.
+	#print("Calculating transmission - MO-basis")
 
-	print("Calculating transmission - MO-basis")
+	#GamL_mo = np.dot(np.dot(eig_vec.T, GamL), eig_vec)
+	#GamR_mo = np.dot(np.dot(eig_vec.T, GamR), eig_vec)
 
-	GamL_mo = np.dot(np.dot(eig_vec.T, GamL), eig_vec)
-	GamR_mo = np.dot(np.dot(eig_vec.T, GamR), eig_vec)
+	#Gamma_L_mo = [GamL_mo for en in range(len(energy_grid))]
+	#Gamma_R_mo = [GamR_mo for en in range(len(energy_grid))]
+	#Gamma_L_mo = np.swapaxes(Gamma_L_mo, 0, 2)
+	#Gamma_R_mo = np.swapaxes(Gamma_R_mo, 0, 2)
 
-	Gamma_L_mo = [GamL_mo for en in range(len(energy_grid))]
-	Gamma_R_mo = [GamR_mo for en in range(len(energy_grid))]
-	Gamma_L_mo = np.swapaxes(Gamma_L_mo, 0, 2)
-	Gamma_R_mo = np.swapaxes(Gamma_R_mo, 0, 2)
+	#Gr_mo = utils_zcolor.ret_gf_ongrid(energy_grid, H_mo, S_mo, Gamma_L_mo, Gamma_R_mo)
+	#trans_mo = utils_zcolor.calc_trans(energy_grid, Gr_mo, Gamma_L_mo, Gamma_R_mo)
+	#utils_zcolor.plot_transmission(energy_grid, np.real(trans_mo), path + plot_basename + "trans_mo.png")
+	#np.save(path + data_basename + 'trans_full_mo.npy', [energy_grid, trans_mo])
 
-	Gr_mo = utils_zcolor.ret_gf_ongrid(energy_grid, H_mo, S_mo, Gamma_L_mo, Gamma_R_mo)
-	trans_mo = utils_zcolor.calc_trans(energy_grid, Gr_mo, Gamma_L_mo, Gamma_R_mo)
-	utils_zcolor.plot_transmission(energy_grid, np.real(trans_mo), path + plot_basename + "trans_mo.png")
-	np.save(path + data_basename + 'trans_full_mo.npy', [energy_grid, trans_mo])
-
-	print('MO-transmission done!')
-
+	#print('MO-transmission done!')
 	np.savetxt(path + 'eig_spectrum.txt', X=eig_vals*Hartree, fmt='%.10s', newline='\n')
 	# find HOMO and LUMO
 	for n in range(len(eig_vals)):
@@ -252,25 +269,24 @@ def main():
 	Gles = np.dot(np.dot(Gr_approx, GamL), Gr_approx.T.conj())
 	Gles *= bias
 
-	Sigma_r_mo = -1j/2. * (GamL_mo + GamR_mo)
-	Gr_approx_mo = utils_zcolor.retarded_gf2(H_mo, S_mo, ef, Sigma_r_mo)
-	Gles_mo = np.dot(np.dot(Gr_approx_mo, GamL_mo), Gr_approx_mo.T.conj())
+	# Sigma_r_mo = -1j/2. * (GamL_mo + GamR_mo)
+	# Gr_approx_mo = utils_zcolor.retarded_gf2(H_mo, S_mo, ef, Sigma_r_mo)
+	# Gles_mo = np.dot(np.dot(Gr_approx_mo, GamL_mo), Gr_approx_mo.T.conj())
 
 	utils_zcolor.plot_complex_matrix(Gles, path + "Gles")
 
 	Tt = np.dot(np.dot(np.dot(GamL, Gr_approx), GamR), Gr_approx.T.conj())
-	Tt_mo = np.dot(np.dot(np.dot(GamL_mo, Gr_approx_mo), GamR_mo), Gr_approx_mo.T.conj())
+	# Tt_mo = np.dot(np.dot(np.dot(GamL_mo, Gr_approx_mo), GamR_mo), Gr_approx_mo.T.conj())
 
 	current_dV = (bias/(2*np.pi))*Tt.trace()
 
 	np.save(path + data_basename + "matrices_dV.npy", [Gr_approx, Gles, GamL])
-	np.save(path + data_basename + "matrices_mo_dV.npy", [Gr_approx_mo, Gles_mo, GamL_mo])
+	# np.save(path + data_basename + "matrices_mo_dV.npy", [Gr_approx_mo, Gles_mo, GamL_mo])
 	np.save(path + data_basename + "trans_dV.npy", [ef, Tt.trace()])
-	np.save(path + data_basename + "trans_mo_dV.npy", [ef, Tt_mo.trace()])
+	# np.save(path + data_basename + "trans_mo_dV.npy", [ef, Tt_mo.trace()])
 	np.save(path + data_basename + "current_dV.npy", current_dV)
 
 	"""Non corrected current"""
-	# phi_xg, gd0 = np.load(path + fname + "ao_basis_grid.npy")
 	current_c, jx_c, jy_c, jz_c, x_cor, y_cor, z_cor = utils_zcolor.Jc_current(Gles,
 										   phi_xg,
 										   gd0,
@@ -303,4 +319,4 @@ def main():
 				  align2)
 
 if __name__ == '__main__':
-	main()
+	exit(main())
