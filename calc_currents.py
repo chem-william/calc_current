@@ -45,11 +45,11 @@ def read_config(config_file):
 def main():	
 	parser = argparse.ArgumentParser(description='Process some integers.')
 	parser.add_argument('--path',
-					    default='data/',
-					    help='path to data folder')
+			    default='data/',
+			    help='path to data folder')
 	parser.add_argument('--xyzname',
-					    default='hh_junc.traj',
-					    help='name of the xyz or traj file')
+			    default='hh_junc.traj',
+			    help='name of the xyz or traj file')
 	parser.add_argument('--basis',
 	                    default='dzp',
 	                    help='basis (sz, dzp, ...)')
@@ -57,8 +57,8 @@ def main():
 	                    default=0.,
 	                    help='fermi')
 	parser.add_argument('--config',
-			    		default=None,
-			    		help='name of the config file where start and end indices are')
+			    default=None,
+			    help='name of the config file where start and end indices are')
 	args = parser.parse_args()
 	path = os.path.abspath(args.path) + "/"
 	ef = float(args.ef)
