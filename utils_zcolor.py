@@ -194,7 +194,7 @@ def gradientO4(f, *varargs):
                        - 8.0*f[tuple(slice2)]
                        + 8.0*f[tuple(slice3)]
                        - f[tuple(slice4)]
-                       /12.0)
+                       ) / 12.0
 
         slice0[axis] = slice(None, 2)
         slice1[axis] = slice(1, 3)
