@@ -1,5 +1,3 @@
-import multiprocessing as mp
-
 import numpy as np
 from ase import Atoms
 from ase.io import write
@@ -67,6 +65,7 @@ def plot_transmission(energy_grid, trans, save_name):
     plt.savefig(save_name)
     plt.close()
 
+
 def calc_trans(energy_grid, gret, gamma_left, gamma_right):
     """
     Landauer Transmission
@@ -77,6 +76,7 @@ def calc_trans(energy_grid, gret, gamma_left, gamma_right):
     trans = np.array([np.matmul(np.matmul(np.matmul(gamma_left[:, :, en], gret[:, :, en]), gamma_right[:, :, en]), gret[:, :, en].T.conj()).trace() for en in range(len(energy_grid))])
 
     return trans
+
 
 def plot_complex_matrix(matrix, save_name):
     fig, axes = plt.subplots(nrows=1, ncols=2)
@@ -98,12 +98,15 @@ def retarded_gf(h_ao, s_ao, energy, gamma_left, gamma_right):
     """
     return np.linalg.inv(energy*s_ao - h_ao + (1j/2.)*(gamma_left + gamma_right))
 
+
 def retarded_gf2(h_ao, s_ao, energy, sigma_ret):
     """
     Retarded Gf
     """
     eta = 1e-10
+
     return np.linalg.inv(-sigma_ret + (energy + eta*1.j)*s_ao - h_ao)
+
 
 def ret_gf_ongrid(energy_grid, h_ao, s_ao, gamma_left, gamma_right):
     """
@@ -115,6 +118,7 @@ def ret_gf_ongrid(energy_grid, h_ao, s_ao, gamma_left, gamma_right):
     ret_gf = np.swapaxes(ret_gf, 0, 2)
 
     return ret_gf
+
 
 def fermi(energy, mu_):
     """
@@ -137,10 +141,13 @@ def fermi_ongrid(energy_grid, e_f, bias):
 
     return f_left, f_right
 
+
 def orb_grad2(phi_xG, i_orb, j_orb, dx, dy, dz):
     psi = phi_xG[i_orb]
     x, y, z = gradientO4(phi_xG[j_orb], dx, dy, dz)
+
     return psi*x, psi*y, psi*z
+
 
 def gradientO4(f, *varargs):
     """Calculate the fourth-order-accurate gradient of an N-dimensional scalar function.
@@ -227,7 +234,6 @@ def gradientO4(f, *varargs):
         return outvals
 
 
-
 def Jc_current(Gles, phi_xg, gd0, path, data_basename, fname):
     Mlt = 1j*Gles/(4*np.pi)
     n = len(Mlt)
@@ -246,7 +252,6 @@ def Jc_current(Gles, phi_xg, gd0, path, data_basename, fname):
     dz = z_cor[1] - z_cor[0]
 
     bf_list = np.arange(0, n, 1)
-
     for k, i in enumerate(bf_list):
         for l, j in enumerate(bf_list):
             x1, y1, z1 = orb_grad2(phi_xg, i, j, dx, dy, dz)
@@ -257,8 +262,9 @@ def Jc_current(Gles, phi_xg, gd0, path, data_basename, fname):
 
     dA = (x_cor[1] - x_cor[0])*(y_cor[1] - y_cor[0])
     current = jz.sum(axis=(0, 1))*dA
-    
+
     return current, jx, jy, jz, x_cor, y_cor, z_cor
+
 
 def create_colorlist(colors):
     n_bins = [201]  # Discretizes the interpolation into bins
@@ -271,6 +277,7 @@ def create_colorlist(colors):
 
     return colorlist
 
+
 def plot_current(jx, jy, jz, x, y, z, savename, s, amp, co, path, align1, align2):
     refmol = read(path + 'central_region.xyz')
     refcoord1 = refmol[align1 + 1].position
@@ -279,12 +286,10 @@ def plot_current(jx, jy, jz, x, y, z, savename, s, amp, co, path, align1, align2
     # make colorlist for zcolor
     colors = [[140/255., 0, 255/255.], [1, 1, 1], [255/255., 165/255., 0]]  # R -> G -> B
     z_colorlist = create_colorlist(colors)
-    print(z_colorlist)
 
     # make colorlist for cylindrical color
     colors = [[1, 0, 0], [1, 1, 1], [0, 0, 1]]  # R -> G -> B
     cyl_colorlist = create_colorlist(colors)
-    print(cyl_colorlist)
 
     au2A = 0.529177249
     x = x[::s]*au2A

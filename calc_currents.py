@@ -165,7 +165,7 @@ def main():
 	gd0 = calc.wfs.gd
 
 	calc.wfs.basis_functions.lcao_to_grid(c_fo_xi, phi_xg, -1)
-	# Writing this to disk will result in a error
+	# Writing this to disk while going multiprocessing with GPAW
 	# Reason: Numpy tries to pickle the objects, but gd0 is 
 	# not pickleable as it's a MPI object
 	# np.save(path + fname + "ao_basis_grid", [phi_xg, gd0])
@@ -174,7 +174,6 @@ def main():
 	# Calculate the transmission AJ style - AO basis
 	print("Calculating transmission - AO-basis")
 
-	#TODO: change pickle to np + delete pickle import
 	H_ao, S_ao = pickle.load(open(path + 'scat_' + fname + '0.pckl', 'rb'))
 	H_ao = H_ao[0, 0] * eV2au
 	S_ao = S_ao[0]
@@ -198,10 +197,9 @@ def main():
 	
 	Gr = Gr.astype(dtype='complex64', order='F')
 	trans = utils_zcolor.calc_trans(energy_grid, Gr, Gamma_L, Gamma_R)
+
 	utils_zcolor.plot_transmission(energy_grid*Hartree, np.real(trans), path + plot_basename + "trans.png")
-
 	np.save(path + data_basename + 'trans_full.npy', [energy_grid*Hartree, trans])
-
 	print("AO-transmission done!")
 
 	# Calculate transmission with MO basis
@@ -240,7 +238,7 @@ def main():
 	#np.save(path + data_basename + 'trans_full_mo.npy', [energy_grid, trans_mo])
 
 	#print('MO-transmission done!')
-	np.savetxt(path + 'eig_spectrum.txt', X=eig_vals*Hartree, fmt='%.10s', newline='\n')
+	np.savetxt(path + eig_spectrum.txt, X=eig_vals*Hartree, fmt=, newline=\n)
 	# find HOMO and LUMO
 	for n in range(len(eig_vals)):
 	    if eig_vals[n] < 0 and eig_vals[n + 1] > 0:
