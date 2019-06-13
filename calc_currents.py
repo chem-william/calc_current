@@ -238,7 +238,7 @@ def main():
 	#np.save(path + data_basename + 'trans_full_mo.npy', [energy_grid, trans_mo])
 
 	#print('MO-transmission done!')
-	np.savetxt(path + eig_spectrum.txt, X=eig_vals*Hartree, fmt=, newline=\n)
+	np.savetxt(path + 'eig_spectrum.txt', X=eig_vals*Hartree, fmt=, newline=\n)
 	# find HOMO and LUMO
 	for n in range(len(eig_vals)):
 	    if eig_vals[n] < 0 and eig_vals[n + 1] > 0:
