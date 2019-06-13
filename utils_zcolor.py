@@ -234,7 +234,7 @@ def gradientO4(f, *varargs):
         return outvals
 
 
-def Jc_current(Gles, phi_xg, gd0, path, data_basename, fname):
+def Jc_current(Gles, phi_xg, dx, dy, dz, gd0, path, data_basename, fname):
     Mlt = 1j*Gles/(4*np.pi)
     n = len(Mlt)
     np.save(path + data_basename + "Gles_dV.npy", Mlt)
@@ -242,14 +242,6 @@ def Jc_current(Gles, phi_xg, gd0, path, data_basename, fname):
     jx = gd0.zeros(1)[0]
     jy = gd0.zeros(1)[0]
     jz = gd0.zeros(1)[0]
-
-    x_cor = gd0.coords(0)
-    y_cor = gd0.coords(1)
-    z_cor = gd0.coords(2)
-
-    dx = x_cor[1] - x_cor[0]
-    dy = y_cor[1] - y_cor[0]
-    dz = z_cor[1] - z_cor[0]
 
     bf_list = np.arange(0, n, 1)
     for k, i in enumerate(bf_list):
@@ -260,10 +252,10 @@ def Jc_current(Gles, phi_xg, gd0, path, data_basename, fname):
             jy += 2*Mlt[k, l].real*y1
             jz += 2*Mlt[k, l].real*z1
 
-    dA = (x_cor[1] - x_cor[0])*(y_cor[1] - y_cor[0])
+    dA = dx*dy
     current = jz.sum(axis=(0, 1))*dA
 
-    return current, jx, jy, jz, x_cor, y_cor, z_cor
+    return current, jx, jy, jz
 
 
 def create_colorlist(colors):
@@ -312,8 +304,8 @@ def plot_current(jx, jy, jz, x, y, z, savename, s, amp, co, path, align1, align2
     cyl_list.append('load "file:$SCRIPT_PATH$/central_region2.xyz" \n'.format(path))
 
     a = 0
-    size = 4 # or 8 for smaller arrows
-    
+    size = 4  # or 8 for smaller arrows
+
     for ix, x2 in enumerate(x):
         for iy, y2 in enumerate(y):
             for iz, z2 in enumerate(z):

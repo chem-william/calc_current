@@ -285,15 +285,25 @@ def main():
 	np.save(path + data_basename + "current_dV.npy", current_dV)
 
 	"""Non corrected current"""
-	current_c, jx_c, jy_c, jz_c, x_cor, y_cor, z_cor = utils_zcolor.Jc_current(Gles,
+    x_coords = gd0.coords(0)
+    y_coords = gd0.coords(1)
+    z_coords = gd0.coords(2)
+
+	dx = x_coords[1] - x_coords[0]
+    dy = y_coords[1] - y_coords[0]
+    dz = z_coords[1] - z_coords[0]
+	current_c, jx_c, jy_c, jz_c= utils_zcolor.Jc_current(Gles,
 										   phi_xg,
 										   gd0,
+										   dx,
+										   dy,
+										   dz,
 										   path,
 	 									   data_basename, 
 										   fname)
 
-	np.save(path + data_basename + "current_c_all.npy", np.array([jx_c, jy_c, jz_c, x_cor, y_cor, z_cor]))
-	np.save(path + data_basename + "current_c.npy", np.array([current_c, x_cor, y_cor, z_cor]))
+	np.save(path + data_basename + "current_c_all.npy", np.array([jx_c, jy_c, jz_c, x_coords, y_coords, z_coords]))
+	np.save(path + data_basename + "current_c.npy", np.array([current_c]))
 
 	SI = 31
 	EI = -31
@@ -301,7 +311,7 @@ def main():
 	multiplier = 1/(3*j_z_cut[::2, ::2, ::2].max())
 	cut_off = j_z_cut[::2, ::2, ::2].max()/20.
 
-	# Sixth last arg is the divider for the real space grid, multiplier gives a thicker diameter
+	# Sixth last arg (grid_size) is the divider for the real space grid, multiplier gives a thicker diameter
 	utils_zcolor.plot_current(jx_c,
 				  jy_c,
 				  jz_c,
