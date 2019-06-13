@@ -283,11 +283,12 @@ def plot_current(jx, jy, jz, x, y, z, savename, s, amp, co, path, align1, align2
     colors = [[1, 0, 0], [1, 1, 1], [0, 0, 1]]  # R -> G -> B
     cyl_colorlist = create_colorlist(colors)
 
-    au2A = 0.529177249
-    x = x[::s]*au2A
-    y = y[::s]*au2A
-    z = z[::s]*au2A
+    x = x[::s]
+    y = y[::s]
+    z = z[::s]
 
+    # TODO: I suspect that the size of these is the same as the size of the 
+    # x, y and z so it can be used in the enumerations below
     jz = jz[::s, ::s, ::s]
     jy = jy[::s, ::s, ::s]
     jx = jx[::s, ::s, ::s]
@@ -341,7 +342,6 @@ def plot_current(jx, jy, jz, x, y, z, savename, s, amp, co, path, align1, align2
     z_list.append("set defaultdrawarrowscale 0.1 \n")
     z_list.append('rotate 90 \n')
     z_list.append('background white \n')
-
 
     cyl_list.append("set defaultdrawarrowscale 0.1 \n")
     cyl_list.append('rotate 90 \n')
