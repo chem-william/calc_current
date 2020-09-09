@@ -152,18 +152,6 @@ def main():
     # Divider for h - size of the arrows for current density
     grid_size = 1
 
-    basename = "__basis_{0}__h_{1}__cutoff_{2}__xc_{3}__gridsize_{4:.2f}__bias_{5}__ef_{6}__gamma_{7}__energy_grid_{8}_{9}_{10}__multi_grid__type__".format(
-        basis,
-        h,
-        xc,
-        grid_size,
-        bias / eV2au,
-        ef / eV2au,
-        gamma / eV2au,
-        estart / eV2au,
-        eend / eV2au,
-        energy_step / eV2au)
-
     plot_basename = "plots/"
     data_basename = "data/"
 
