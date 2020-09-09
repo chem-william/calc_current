@@ -180,7 +180,7 @@ def main():
     pot_energy = atoms.get_potential_energy()  # Converge everything!
     print('Fermi is', atoms.calc.get_fermi_level())
 
-    dump_hamiltonian_parallel(path + 'scat_' + fname, atoms, direction='z')
+    dump_hamiltonian_parallel(path + 'scat_', atoms, direction='z')
 
     # Write AO basis to disk
     bfs = get_bfi(symbols, basis, range(len(atoms)))
@@ -193,7 +193,7 @@ def main():
     # Writing this to disk while going multiprocessing with GPAW
     # Reason: Numpy tries to pickle the objects, but gd0 is 
     # not pickleable as it's a MPI object
-    # np.save(path + fname + "ao_basis_grid", [phi_xg, gd0])
+    # np.save(path + "ao_basis_grid", [phi_xg, gd0])
     utils_zcolor.plot_basis(atoms, phi_xg, folder_name=path + "basis/ao")
 
     H_ao, S_ao = pickle.load(open(path + 'scat_' + '0.pckl', 'rb'))
