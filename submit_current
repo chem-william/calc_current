@@ -1,19 +1,21 @@
 #!/bin/bash
-if [ $# -ne 4 ]; then
+if [ $# -ne 3 ] && [ $# -ne 4 ]; then
     echo " This script has to be called in the following form:"
     echo ""
-    echo "                    submit_g16 queue cores mem input"
-    echo ""
+    echo "                    current_submit queue cores mem"
+    echo "Optionally a fourth argument can be the name of the job"
     exit
 fi
 
 QUEUE=$1
 CORES=$2
 MEM=$3
-IN=$4
+NAME=$4
 
-# get the filename without the extension
-JOB=${IN%.*}
+if [ -z "$NAME" ]; then
+	NAME="current_calc"
+	echo "Job name has been set to default: $NAME"
+fi
 
 SUBMIT=qsub.tmp
 PWD=`pwd`
@@ -28,26 +30,23 @@ then
     if [[ $REPLY =~ ^[Yy]$ ]]
     then
         rm -rfv data/ __pycache__/ logfile.txt seq.*.err seq.*.out
-        mkdir data
-        mkdir data/basis
-        mkdir data/basis/ao
-        mkdir data/basis/mo
-        mkdir data/basis/lowdin
-        mkdir data/basis/eigchan
-        mkdir data/plots
-        mkdir data/data
-        cp hh_junc.traj data/.
     else
         exit
     fi
 fi
 
-#SBATCH --mail-type=END,FAIL
-#SBATCH --mail-user=bkhiohio@gmail.com
+mkdir data
+mkdir data/basis
+mkdir data/basis/ao
+mkdir data/basis/mo
+mkdir data/basis/eigenchannels
+mkdir data/plots
+mkdir data/data
+cp hh_junc.traj data/.
 
 cat > $SUBMIT <<!EOF
 #!/bin/bash
-#SBATCH --job-name=$JOB
+#SBATCH --job-name=$NAME
 #SBATCH --error=`pwd`/seq.%j.err
 #SBATCH --output=`pwd`/seq.%j.out
 #SBATCH --nodes=1
@@ -56,8 +55,11 @@ cat > $SUBMIT <<!EOF
 #SBATCH --mem=$MEM"gb"
 #SBATCH --partition=$QUEUE
 
-srun gpaw-python ~/bin/py_scripts/calc_currents.py --path $PWD/data
+#Important to set OPENBLAS_NUM_THREADS
+#GPAW will hang for a long time if not
+export OPENBLAS_NUM_THREADS=1
 
+srun python3 -u ~/bin/py_scripts/calc_currents.py --path $PWD/data --config $PWD/config
 !EOF
 
 sbatch $SUBMIT
