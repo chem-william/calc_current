@@ -183,7 +183,7 @@ def main():
     dump_hamiltonian_parallel(path + 'scat_', atoms, direction='z')
 
     # Write AO basis to disk
-    bfs = get_bfi(symbols, basis, range(len(atoms)))
+    bfs = get_bfi(calc, range(len(atoms)))
     rot_mat = np.diag(v=np.ones(len(bfs)))
     c_fo_xi = asc(rot_mat.real.T)  # coefficients
     phi_xg = calc.wfs.basis_functions.gd.zeros(len(c_fo_xi))
@@ -196,7 +196,7 @@ def main():
     # np.save(path + "ao_basis_grid", [phi_xg, gd0])
     utils_zcolor.plot_basis(atoms, phi_xg, folder_name=path + "basis/ao")
 
-    H_ao, S_ao = pickle.load(open(path + 'scat_' + '0.pckl', 'rb'))
+    H_ao, S_ao = pickle.load(open(path + 'scat_0.pckl', 'rb'))
     H_ao = H_ao[0, 0]
     H_ao *= eV2au
     S_ao = S_ao[0]
