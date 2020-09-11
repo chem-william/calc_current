@@ -110,7 +110,6 @@ def main():
     else:
         cutoff = 20
 
-
     # Constants
     FDwidth = 0.1
     kpts = (1, 1, 1)
