@@ -27,13 +27,13 @@ from numpy import ascontiguousarray as asc
 import gpaw
 import matplotlib
 import numpy as np
-import utils_zcolor
-from libgradient import Gradient
 # To retrieve path to utils_zcolor which should be placed in the same folder as
 # calc_current.py
 from pathlib import Path
 home = str(Path.home())
-sys.path.append(home + '/bin/py_scripts/')
+sys.path.append(home + '/bin/py_scripts/calc_current')
+import utils_zcolor
+from libgradient import Gradient
 
 matplotlib.use('agg')
 
@@ -171,12 +171,13 @@ def main():
         occupations=FermiDirac(width=FDwidth),
         kpts=kpts,
         mode=mode,
+        nbands="nao",
         symmetry={'point_group': False, 'time_reversal': False},
         charge=charge,
         txt="logfile.txt"
     )
     atoms.set_calculator(calc)
-    pot_energy = atoms.get_potential_energy()  # Converge everything!
+    atoms.get_potential_energy()  # Converge everything!
     print('Fermi is', atoms.calc.get_fermi_level())
 
     dump_hamiltonian_parallel(path + 'scat_', atoms, direction='z')
