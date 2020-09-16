@@ -216,9 +216,8 @@ def main():
     mo_phi_xg = calc.wfs.basis_functions.gd.zeros(len(c_fo_xi))
     calc.wfs.basis_functions.lcao_to_grid(c_fo_xi, mo_phi_xg, -1)
     np.save(path + "mo_energies", eig_vals)
-    # np.save(path + "mo_basis", mo_phi_xg)
+
     utils_zcolor.plot_basis(atoms, mo_phi_xg, folder_name=path + "basis/mo")
-    np.save(path + "mo_basis.npy", mo_phi_xg)
 
     n = len(H_ao)
 
@@ -361,11 +360,11 @@ def main():
 
     np.save(
         path + "data/" + "current_all.npy",
-        np.array([jx, jy, jz, x_cor, y_cor, z_cor])
+        [jx, jy, jz, x_cor, y_cor, z_cor],
     )
     np.save(
         path + data_basename + "current_c.npy",
-        np.array([current_c])
+        current_c
     )
 
     SI = 31
