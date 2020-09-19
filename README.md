@@ -31,4 +31,9 @@ Other options for the config file include the following (the default value is sh
 * ```functional=pbe``` The functional that is used to calculate the electronic structure.
 * ```h_spacing=0.2``` Specifies the grid spacing in Å that has to be used for the realspace representation of the smooth wave functions
 * ```charge=0``` Charge of the molecule
-* ```cutoff=20``` How many arrows to include in the plot of the current density. A value of 20 corresponds to not plotting arrows smaller than 5% of the largest arrow. 
+* ```cutoff=20``` How many arrows to include in the plot of the current density. A value of 20 corresponds to not plotting arrows smaller than 5% of the largest arrow.
+
+## Contact
+Please feel free to open an issue if you have any questions or notice that something might be wrong!
+
+Otherwise, my contact informatino can be found [here](https://chem.ku.dk/ansatte/alle/?pure=en%2Fpersons%2Fwilliam-brojoergensen(0abe1d7c-55a6-4da3-b351-57568c14316b).html)
