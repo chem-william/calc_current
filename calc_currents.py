@@ -38,7 +38,7 @@ from libgradient import Gradient
 matplotlib.use('agg')
 
 
-def read_config(config_file):
+def read_config(config_file: str) -> dict:
     with open(config_file) as file:
         lines = file.readlines()
         values = [line.split('=') for line in lines]
@@ -49,7 +49,7 @@ def read_config(config_file):
     return config_values
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description='Process some integers.')
     parser.add_argument(
         '--path',
@@ -111,15 +111,15 @@ def main():
         cutoff = 20
 
     # Constants
-    FDwidth = 0.1
+    FDwidth: float = 0.1
     kpts = (1, 1, 1)
-    mode = 'lcao'
-    eV2au = 1/Hartree
-    bias = 1e-3 * eV2au
-    gamma = 1e0 * eV2au
-    ef = ef * eV2au  # If ef has been set to a custom value.
+    mode: str = 'lcao'
+    eV2au: float = 1/Hartree
+    bias: float = 1e-3 * eV2au
+    gamma: float = 1e0 * eV2au
+    ef: float = ef * eV2au  # If ef has been set to a custom value.
     estart, eend = [-6 * eV2au, 6 * eV2au]
-    energy_step = 1e-2 * eV2au
+    energy_step: float = 1e-2 * eV2au
     energy_grid = np.arange(estart, eend, energy_step)
 
     # Align z-axis and cutoff at these atoms, OBS paa retningen.
@@ -129,8 +129,8 @@ def main():
     if 'top_atom' not in config_values:
         raise ValueError('You need to specify the top atom to align molecule')
 
-    align1 = int(config_values['bottom_atom']) - 1
-    align2 = int(config_values['top_atom']) - 1
+    align1: int = int(config_values['bottom_atom']) - 1
+    align2: int = int(config_values['top_atom']) - 1
 
     basis_full = {
         'H': h_basis,
@@ -149,10 +149,10 @@ def main():
     }
 
     # Divider for h - size of the arrows for current density
-    grid_size = 1
+    grid_size: int = 1
 
-    plot_basename = "plots/"
-    data_basename = "data/"
+    plot_basename: str = "plots/"
+    data_basename: str = "data/"
 
     molecule = read(path + xyzname)
 
@@ -221,8 +221,8 @@ def main():
 
     n = len(H_ao)
 
-    GamL = np.zeros([n, n])
-    GamR = np.zeros([n, n])
+    GamL = np.zeros([n, n], dtype="float64")
+    GamR = np.zeros([n, n], dtype="float64")
     GamL[0, 0] = gamma
     GamR[n - 1, n - 1] = gamma
 
@@ -232,15 +232,14 @@ def main():
     Gamma_R = np.swapaxes(Gamma_R, 0, 2)
 
     Gr = utils_zcolor.ret_gf_ongrid(energy_grid, H_ao, S_ao, Gamma_L, Gamma_R)
-    
+
     # Calculate the transmission - AO basis
     print("Calculating transmission - AO-basis")
 
     # To optimize the following matrix operations
     Gamma_L = Gamma_L.astype(dtype='float32', order='F')
     Gamma_R = Gamma_R.astype(dtype='float32', order='F')
-    
-    Gr = Gr.astype(dtype='complex64', order='F')
+    Gr = Gr.astype(dtype='complex128', order='F')
     trans = utils_zcolor.calc_trans(energy_grid, Gr, Gamma_L, Gamma_R)
 
     utils_zcolor.plot_transmission(
@@ -276,7 +275,6 @@ def main():
     ]
     np.savetxt(path + 'HOMO_LUMO.txt', X=hl_gap, fmt='%.10s', newline='\n')
 
-
     """Current with fermi functions"""
     fR, fL = utils_zcolor.fermi_ongrid(energy_grid, ef, bias)
     dE = energy_grid[1] - energy_grid[0]
@@ -284,7 +282,6 @@ def main():
         [trans[en].real * (fL[en]-fR[en])*dE for en in range(len(energy_grid))]
     ).sum()
     np.save(path + data_basename + "current_trans.npy", current_trans)
-
 
     """Current approx at low temp"""
     sigma_r = -1j/2. * (GamL + GamR)  # + V_pot
@@ -342,7 +339,7 @@ def main():
     utils_zcolor.plot_complex_matrix(Gles_mo, path + "Gles_mo")
 
     Tt_mo = np.dot(np.dot(np.dot(GamL_mo, Gr_approx_mo), GamR_mo), Gr_approx_mo.T.conj())
-    current_dV_mo = (bias/(2*np.pi))*Tt_mo.trace()
+    current_dV_mo = (bias/(2*np.pi))*Tt_mo.trace()  # Single spin current
     np.save(path + "data/trans_dV_mo.npy", [ef, Tt_mo.trace()])
     np.save(path + "data/current_dV_mo.npy", current_dV_mo)
 
@@ -399,4 +396,4 @@ def main():
 
 
 if __name__ == '__main__':
-	exit(main())
+    exit(main())
