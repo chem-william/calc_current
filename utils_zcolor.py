@@ -222,7 +222,9 @@ def plot_current(
 
                 if norm2 > cut_off and z2 > refcoord1[2] and z2 < refcoord2[2]:
                     rel_z = jz[ix, iy, iz]/norm2
-                    z_color = z_colorlist[int(np.round(rel_z, decimals=2)*100) + 100]
+                    z_color = z_colorlist[
+                        int(np.round(rel_z, decimals=2)*100) + 100
+                    ]
 
                     rel_phi = (jy[ix, iy, iz]*np.cos(np.arctan2(y2 - refcoord1[1], x2 - refcoord1[0])) - jx[ix, iy, iz]*np.sin(np.arctan2(y2 - refcoord1[1], x2 - refcoord1[0])))/norm2
                     cyl_color = cyl_colorlist[int(np.round(rel_phi, decimals=2)*100) + 100]
@@ -268,15 +270,19 @@ def plot_current(
 
 
 def plot_convergence() -> None:
-    _, _, jz, x, y, z = np.load("./data/data/current_all.npy", allow_pickle=True)
-    current = np.abs(np.real(np.load("./data/data/current_dV_mo.npy", allow_pickle=True)))*6.623618183e-3
+    _, _, jz, x, y, z = np.load(
+        "./data/data/current_all.npy", allow_pickle=True
+    )
+    current = np.abs(
+        np.real(np.load("./data/data/current_dV_mo.npy", allow_pickle=True))
+    )*6.623618183e-3
     z *= 0.529177249*0.1
     dA = (x[1] - x[0])*(y[1] - y[0])
     jz_sum = np.abs(jz.sum(axis=(0, 1))*dA*6.623618183e-3)
 
     fig, ax = plt.subplots()
     ax.plot(z, jz_sum, c=c[0], label="xy-plane current")
-    ax.axhline(current, linestyle="--", c=c[1], label=f"Total current")
+    ax.axhline(current, linestyle="--", c=c[1], label="Total current")
     print(f"Current on convergence plot: {current}")
 
     ax.set_xlabel("z-coordinate (nm)")
