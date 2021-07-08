@@ -1,5 +1,5 @@
 # calc_current
-This script is used to calculate the Landauer transmission and current density for a given molecule in a junction. The junction is assumed to be two dihydrogens.
+Calculates the Landauer transmission and current density for a given molecule in a junction. The electrodes are assumed to be two dihydrogens.
 
 ## How do I use this?
 The following assumes you're running the calculation on a system that uses [SLURM](https://slurm.schedmd.com/documentation.html).
