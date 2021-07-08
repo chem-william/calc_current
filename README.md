@@ -2,6 +2,7 @@
 Calculates the Landauer transmission and current density for a given molecule in a junction. The electrodes are assumed to be two dihydrogens.
 
 ## How do I use this?
+First, a junction has to be generated using `junction.py`.
 The following assumes you're running the calculation on a system that uses [SLURM](https://slurm.schedmd.com/documentation.html).
 You need two things in the same folder: a file named hh_junc.traj that contains the junction and a file named config that, as a minimum, contains the indices for the top and bottom atoms on the z-axis. You then run the following command
 ```bash
