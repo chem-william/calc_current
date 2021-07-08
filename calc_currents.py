@@ -1,14 +1,19 @@
 """
-This code was tested using Python 3.6.4, GPAW 1.5.1, and ASE 3.16.0
-This script must be run with access to utils_zcolor.py and with an appropriately setup 'data' directory which can be generated with the make_dirs.sh shell script.
-The output is a jmol (.spt) script, and can be collected with the collect_spt.py script.
+This code was tested using Python 3.7.9, GPAW 21.1.0, and ASE 3.20.1
+This script must be run with access to utils_zcolor.py and with an appropriately setup 'data' directory
+The output is a jmol (.spt) script
 
-For help contact marc@chem.ku.dk / marchamiltongarner@hotmail.com
+For help contact wbj@chem.ku.dk
 
 Please cite the appropriate work.
 s-band electrode transmission code: DOI: 10.1021/acs.jpclett.8b03432
-Current density code: Jensen et al. "When Current Does Not Follow Bonds: Current Density In Saturated Molecules" Submitted 2018
-Current density with cylindrical coordinates: Garner et al. "Helical Orbitals and Circular Currents in Linear Carbon Wires" Submitted 2018
+Current density code:
+Jensen et al. "When Current Does Not Follow Bonds: Current Density In Saturated Molecules"
+Submitted 2018
+
+Current density with cylindrical coordinates:
+Garner et al. "Helical Orbitals and Circular Currents in Linear Carbon Wires"
+Submitted 2018
 """
 
 import argparse
