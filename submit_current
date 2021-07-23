@@ -50,8 +50,8 @@ cat > $SUBMIT <<!EOF
 #SBATCH --error=`pwd`/seq.%j.err
 #SBATCH --output=`pwd`/seq.%j.out
 #SBATCH --nodes=1
-#SBATCH --ntasks=1
-#SBATCH --cpus-per-task=$CORES
+#SBATCH --ntasks=$CORES
+#SBATCH --cpus-per-task=2
 #SBATCH --mem=$MEM"gb"
 #SBATCH --partition=$QUEUE
 
@@ -59,7 +59,8 @@ cat > $SUBMIT <<!EOF
 #GPAW will hang for a long time if not
 export OPENBLAS_NUM_THREADS=1
 
-srun python3 -u ~/bin/py_scripts/calc_currents.py --path $PWD/data --config $PWD/config
+gpaw -P $CORES python ~/bin/py_scripts/calc_current/calc_currents.py --path $PWD/data --config $PWD/config
+
 !EOF
 
 sbatch $SUBMIT
