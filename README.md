@@ -1,6 +1,8 @@
 # calc_current
 Calculates the Landauer transmission and current density for a given molecule in a junction. The electrodes are assumed to be two dihydrogens.
 
+It uses a Rust script to calculate the gradient. The source code can be grabbed [here](https://github.com/chem-william/gradient04)
+
 ## How do I use this?
 First, a junction has to be generated using `junction.py`.
 The following assumes you're running the calculation on a system that uses [SLURM](https://slurm.schedmd.com/documentation.html).
