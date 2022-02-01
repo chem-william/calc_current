@@ -4,7 +4,11 @@ Calculates the Landauer transmission and current density for a given molecule in
 It uses a Rust script to calculate the gradient. The source code can be grabbed [here](https://github.com/chem-william/gradient04)
 
 ## How do I use this?
-First, a junction has to be generated using `junction.py`.
+First, a junction has to be generated using `junction.py`. It will look for `.xyz` file in the same folder as itself.
+The script attaches two dihydrogens at specified locations at the molecule in the `.xyz`. It creates a `hh_junc.traj` which will subsequently be used for calculating the current density.
+
+To modify where the electrodes are attached to the molecule, you'll have to edit `start_indices`, `end_indices` and the `A`, `D1`, and `D2` parameters of `create_junction()`. The first electrode is attached at a dihedral angle of `D1` formed from the three indices of `start_indices` and `D1`. Likewise for the second electrode, `end_indices`, and `D2`.
+
 The following assumes you're running the calculation on a system that uses [SLURM](https://slurm.schedmd.com/documentation.html).
 You need two things in the same folder: a file named hh_junc.traj that contains the junction and a file named config that, as a minimum, contains the indices for the top and bottom atoms on the z-axis. You then run the following command
 ```bash
