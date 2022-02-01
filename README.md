@@ -43,4 +43,4 @@ Other options for the config file include the following (the default value is sh
 ## Contact
 Please feel free to open an issue if you have any questions or notice that something might be wrong!
 
-Otherwise, my contact informatino can be found [here](https://chem.ku.dk/ansatte/alle/?pure=en%2Fpersons%2Fwilliam-brojoergensen(0abe1d7c-55a6-4da3-b351-57568c14316b).html)
+Otherwise, my contact information can be found [here](https://chem.ku.dk/ansatte/alle/?pure=en%2Fpersons%2Fwilliam-brojoergensen(0abe1d7c-55a6-4da3-b351-57568c14316b).html)
