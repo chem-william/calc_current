@@ -3,6 +3,8 @@ Calculates the Landauer transmission and current density for a given molecule in
 
 It uses a Rust script to calculate the gradient. The source code can be grabbed [here](https://github.com/chem-william/gradient04)
 
+Due to some API changes of GPAW (specifically the change from `dump_hamiltonian_parallel` to `dump_hamiltonian_and_overlap`), the latest supported version of GPAW is 20.1.0
+
 ### Workspace assumptions
 The following assumes you're running the calculation on a system that uses [SLURM](https://slurm.schedmd.com/documentation.html).
 You need two things in the same folder: a file named hh_junc.traj that contains the junction and a file named config that, as a minimum, contains the indices for the top and bottom atoms on the z-axis. You then run the following command
