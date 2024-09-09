@@ -1,5 +1,4 @@
 """
-This code was tested using Python 3.7.9, GPAW 21.1.0, and ASE 3.20.1
 This script must be run with access to utils_zcolor.py and with an appropriately setup 'data' directory
 The output is a jmol (.spt) script
 
