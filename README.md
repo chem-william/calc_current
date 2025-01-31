@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/177812811.svg)](https://doi.org/10.5281/zenodo.14778213)
+
 # calc_current
 Calculates the Landauer transmission and current density for a given molecule in a junction. The electrodes are assumed to be two dihydrogens.
 
